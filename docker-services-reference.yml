@@ -1,0 +1,33 @@
+# Reference file for all Docker services
+# Services are managed independently but share aztech-network
+
+# 1. Caddy Proxy (manages all web traffic)
+# Location: /srv/aztech-caddy/docker-compose.yml
+# Network: aztech-network
+
+# 2. Django Landing App (standalone container)
+# Container: django-landing-app
+# Ports: 8000:8000
+# Network: aztech-network
+
+# 3. Auth Server Frontend (standalone container)
+# Container: authserver-frontend
+# Port: 3000
+# Network: aztech-network
+
+# 4. Auth Server Backend (standalone container, currently restarting)
+# Container: authserver-backend
+# Port: 8080
+# Network: aztech-network
+
+# 5. Databases (standalone containers)
+# - authserver-db:5432
+# - django-landing-db:5433→5432
+# Network: aztech-network
+
+# 6. Portainer (Docker management)
+# Container: portainer
+# Ports: 9000:9000, 9443:9443
+# Network: aztech-network
+
+# All services can communicate via aztech-network using container names

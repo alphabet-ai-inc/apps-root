@@ -1,0 +1,115 @@
+# Copy to parent directory of all applications /srv
+services:
+  # ========== CADDY PROXY ==========
+  caddy:
+    image: caddy:2-alpine
+    container_name: aztech-caddy
+    restart: unless-stopped
+    ports:
+      - 80:80
+      - 443:443
+      - 443:443/udp
+    volumes:
+      - /srv/aztech-caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - aztech-network
+    depends_on:
+      # - django-landing-app
+      - authserver-frontend
+      - authserver-backend
+
+  # ========== AUTH SERVER ==========
+  authserver-backend:
+    build: ./authserver/backend
+    container_name: authserver-backend
+    restart: unless-stopped
+    env_file: ./authserver/backend/.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: ${PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      SESSION_AUTH_KEY: ${SESSION_AUTH_KEY}
+      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+      DOMAIN: ${DOMAIN}
+      NODE_ENV: ${NODE_ENV}
+    depends_on:
+      - authserver-db
+    networks:
+      - aztech-network
+
+  authserver-frontend:
+    build: ./authserver/frontend
+    container_name: authserver-frontend
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    networks:
+      - aztech-network
+
+  authserver-db:
+    build: ./authserver/database
+    container_name: authserver-db
+    restart: unless-stopped
+    env_file: ./authserver/database/.env
+    volumes:
+      - db:/var/lib/postgresql # Updated mount point for Postgres 18+
+    ports:
+      - 5432:5432
+    networks:
+      - aztech-network
+
+  # ========== DJANGO LANDING ==========
+  # django-landing-app:
+  #   image: django-landing-app
+  #   container_name: django-landing-app
+  #   restart: unless-stopped
+  #   ports:
+  #     - 8000:8000
+  #   networks:
+  #     - aztech-network
+
+  # django-landing-db:
+  #   image: postgres:18
+  #   container_name: django-landing-db
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: ${DJANGO_DB_NAME}
+  #     POSTGRES_USER: ${DJANGO_DB_USER}
+  #     POSTGRES_PASSWORD: ${DJANGO_DB_PASSWORD}
+  #   volumes:
+  #     - django_db_data:/var/lib/postgresql/data
+  #   ports:
+  #     - 5433:5432
+  #   networks:
+  #     - aztech-network
+
+  # ========== PORTAINER ==========
+  # portainer:
+  #   image: portainer/portainer-ce:latest
+  #   container_name: portainer
+  #   restart: unless-stopped
+  #   ports:
+  #     - 9000:9000
+  #     - 9443:9443
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - portainer_data:/data
+  #   networks:
+  #     - aztech-network
+
+networks:
+  aztech-network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  db:
+  # django_db_data:
+  # portainer_data:

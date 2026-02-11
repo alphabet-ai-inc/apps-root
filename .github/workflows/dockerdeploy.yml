@@ -1,0 +1,101 @@
+name: Docker Deploy
+on:
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: "Deployment environment"
+                required: true
+                default: "production"
+                type: choice
+                options:
+                    - staging
+                    - production
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Retrieve secrets from Vault
+              run: |
+                  # Vault configuration
+                  VAULT_ADDR="${{ secrets.VAULT_ADDR }}"
+                  VAULT_TOKEN="${{ secrets.VAULT_TOKEN }}"
+
+                  # Function to get secret from Vault
+                  get_secret() {
+                    local path="$1"
+                    local key="$2"
+                    local api_url="$VAULT_ADDR/v1/secret/data/$path"
+                    local response
+                    response=$(curl -s -H "X-Vault-Token: $VAULT_TOKEN" "$api_url")
+
+                    if echo "$response" | grep -q '"errors"'; then
+                      echo "❌ Error: $(echo "$response" | jq -r '.errors[0]')" >&2
+                      exit 1
+                    fi
+
+                    local value
+                    value=$(echo "$response" | jq -r ".data.data.$key")
+
+                    if [ "$value" = "null" ] || [ -z "$value" ]; then
+                      echo "❌ Key '$key' not found in '$path'" >&2
+                      exit 1
+                    fi
+
+                    echo "$value"
+                  }
+
+                  # Get SSH secrets
+                  get_secret "authserver/ssh" "private_key" > /tmp/ssh_private_key
+                  get_secret "authserver/ssh" "server_ip" > /tmp/server_ip
+                  get_secret "authserver/ssh" "username" > /tmp/username
+
+                  echo "🎉 Secrets retrieved!"
+
+            - name: Checkout apps-root
+              uses: actions/checkout@v4
+              with:
+                  path: apps-root
+
+            - name: Checkout aztech-caddy
+              uses: actions/checkout@v4
+              with:
+                  repository: ${{ github.repository_owner }}/aztech-caddy
+                  path: aztech-caddy
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Setup SSH
+              run: |
+                  echo "🔑 Setting up SSH..."
+                  mkdir -p ~/.ssh
+
+                  # Copy SSH key
+                  cp /tmp/ssh_private_key ~/.ssh/deploy_key
+                  sed -i 's/\r//g' ~/.ssh/deploy_key
+                  chmod 600 ~/.ssh/deploy_key
+
+                  # Read server details
+                  SERVER_IP=$(cat /tmp/server_ip | tr -d '[:space:]')
+                  SSH_USERNAME=$(cat /tmp/username | tr -d '[:space:]' || echo "root")
+
+                  echo "SERVER_IP=$SERVER_IP" >> $GITHUB_ENV
+                  echo "SSH_USERNAME=$SSH_USERNAME" >> $GITHUB_ENV
+
+                  # Add to known hosts
+                  ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
+
+            - name: Deploy to server
+              env:
+                  SSH_USERNAME: ${{ env.SSH_USERNAME }}
+                  SERVER_IP: ${{ env.SERVER_IP }}
+              run: |
+                  echo "🚀 Deploying to $SERVER_IP as user: $SSH_USERNAME"
+
+                  # Copy aztech-caddy
+                  scp -r -i ~/.ssh/deploy_key aztech-caddy $SSH_USERNAME@$SERVER_IP:/srv/
+
+                  # Copy apps-root
+                  scp -r -i ~/.ssh/deploy_key apps-root $SSH_USERNAME@$SERVER_IP:/srv/
+
+                  # Deploy docker-compose
+                  ssh -i ~/.ssh/deploy_key $SSH_USERNAME@$SERVER_IP "cd /srv/apps-root && docker-compose down && docker-compose up -d"
