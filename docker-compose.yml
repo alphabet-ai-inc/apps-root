@@ -26,18 +26,6 @@ services:
     container_name: authserver-backend
     restart: unless-stopped
     env_file: ./authserver/backend/.env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      PORT: ${PORT}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
-      SESSION_AUTH_KEY: ${SESSION_AUTH_KEY}
-      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY}
-      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
-      DOMAIN: ${DOMAIN}
-      NODE_ENV: ${NODE_ENV}
     depends_on:
       - authserver-db
     networks:
