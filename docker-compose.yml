@@ -1,5 +1,27 @@
 # Copy to parent directory of all applications /srv
 services:
+  # ========== POSTGRES DATABASE ==========
+  authserver-db:
+    build: ./authserver/database
+    container_name: authserver-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_EXTERNAL_PORT}:5432"
+    networks:
+      - aztech-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   # ========== CADDY PROXY ==========
   caddy:
     image: caddy:2-alpine
@@ -27,7 +49,8 @@ services:
     restart: unless-stopped
     env_file: ./authserver/backend/.env
     depends_on:
-      - authserver-db
+      authserver-db:
+        condition: service_healthy
     networks:
       - aztech-network
 
@@ -37,18 +60,6 @@ services:
     restart: unless-stopped
     ports:
       - 3000:3000
-    networks:
-      - aztech-network
-
-  authserver-db:
-    build: ./authserver/database
-    container_name: authserver-db
-    restart: unless-stopped
-    env_file: ./authserver/database/.env
-    volumes:
-      - db:/var/lib/postgresql # Updated mount point for Postgres 18+
-    ports:
-      - 5432:5432
     networks:
       - aztech-network
 
@@ -91,13 +102,15 @@ services:
   #   networks:
   #     - aztech-network
 
+# SINGLE networks section at the end
 networks:
   aztech-network:
     driver: bridge
 
+# SINGLE volumes section at the end
 volumes:
   caddy_data:
   caddy_config:
-  db:
-  # django_db_data:
-  # portainer_data:
+  postgres_data:
+  django_db_data:
+  portainer_data:
