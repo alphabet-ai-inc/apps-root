@@ -2,26 +2,28 @@
 services:
   # ========== POSTGRES DATABASE ==========
   authserver-db:
-    build: ./authserver/database
+    image: postgres:18 # Use official image for default installation
     container_name: authserver-db
     restart: unless-stopped
-    env_file: ./authserver/database/.env
+    environment: # Inline defaults instead of env_file for simplicity in testing
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     ports:
-      - $POSTGRES_EXTERNAL_PORT:5432
+      - 5432:5432
     networks:
       - aztech-network
     healthcheck:
-      test:
-        [
+      test: [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1",
+          "pg_isready -U postgres -d postgres || exit 1", # Hardcode defaults to avoid variable issues
         ]
       interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 30s # Give PostgreSQL 30 seconds to initialize
+      start_period: 30s
 
   # ========== CADDY PROXY ==========
   caddy:
