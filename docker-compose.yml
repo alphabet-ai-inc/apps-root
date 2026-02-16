@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql # this is the default data directory for postgres
     ports:
       - 5432:5432
     networks:
@@ -61,8 +61,6 @@ services:
     build: ./authserver/frontend
     container_name: authserver-frontend
     restart: unless-stopped
-    ports:
-      - 3000:3000
     networks:
       - aztech-network
 
