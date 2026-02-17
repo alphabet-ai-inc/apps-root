@@ -29,7 +29,7 @@ services:
     image: authserver-test-backend:latest
     container_name: authserver-test-backend
     restart: unless-stopped
-    env_file: ./authserver/backend/.env
+    env_file: ./authserver-test/backend/.env
     depends_on:
       authserver-test-db:
         condition: service_healthy
