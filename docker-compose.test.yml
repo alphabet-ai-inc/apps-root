@@ -1,0 +1,56 @@
+# docker-compose.test.yml - Place this in apps-root repository
+# Copy to /opt/authserver-test/docker-compose.yml during test deployment
+
+services:
+  # ========== TEST DATABASE ==========
+  authserver-test-db:
+    image: postgres:18
+    container_name: authserver-test-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_test_data:/var/lib/postgresql
+    ports:
+      - "5433:5432" # Different host port to avoid conflict with production (5432)
+    networks:
+      - aztech-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ========== TEST BACKEND ==========
+  authserver-test-backend:
+    image: authserver-test-backend:latest
+    container_name: authserver-test-backend
+    restart: unless-stopped
+    env_file: ./authserver/backend/.env
+    depends_on:
+      authserver-test-db:
+        condition: service_healthy
+    networks:
+      - aztech-network
+    # No ports exposed - runs internally, accessed via Caddy reverse proxy
+
+  # ========== TEST FRONTEND ==========
+  authserver-test-frontend:
+    image: authserver-test-frontend:latest
+    container_name: authserver-test-frontend
+    restart: unless-stopped
+    networks:
+      - aztech-network
+    # No ports exposed - runs internally, accessed via Caddy reverse proxy
+
+# Use existing network shared with production Caddy
+networks:
+  aztech-network:
+    external: true
+
+# Separate volume for test data
+volumes:
+  postgres_test_data:
