@@ -49,8 +49,8 @@ services:
 # Use existing network shared with production Caddy
 networks:
   aztech-network:
-    external: true
-
+    external: true # Use existing network instead of creating new one
+    name: srv_aztech-network # Or use the actual network name
 # Separate volume for test data
 volumes:
   postgres_test_data:
