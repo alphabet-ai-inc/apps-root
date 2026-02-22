@@ -12,6 +12,7 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql # this is the default data directory for postgres
+      - ./authserver/database/init-security.sql:/docker-entrypoint-initdb.d/01-security.sql:ro
     ports:
       - 5432:5432
     networks:
@@ -25,6 +26,14 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+    # Security hardening: Disable dangerous functions that could be exploited
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c pg_stat_statements.max=10000
+    security_opt:
+      - no-new-privileges:true
 
   # ========== CADDY PROXY ==========
   caddy:
@@ -101,6 +110,27 @@ services:
   #   volumes:
   #     - /var/run/docker.sock:/var/run/docker.sock
   #     - portainer_data:/data
+  #   networks:
+  #     - aztech-network
+
+  # ========== SECURITY SCANNING ==========
+  # Optional security scanner - uncomment to enable vulnerability scanning
+  # security-scanner:
+  #   image: aquasecurity/trivy:latest
+  #   container_name: security-scanner
+  #   profiles: ["security"]
+  #   command: >
+  #     trivy image
+  #     --format table
+  #     --exit-code 1
+  #     --ignore-unfixed
+  #     --vuln-type os,library
+  #     authserver-db:latest
+  #     authserver-backend:latest
+  #     authserver-frontend:latest
+  #     caddy:2-alpine
+  #   volumes:
+  #     - /tmp/trivy-cache:/root/.cache/trivy
   #   networks:
   #     - aztech-network
 
