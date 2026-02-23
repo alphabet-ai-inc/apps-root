@@ -37,7 +37,7 @@ services:
 
   # ========== CADDY PROXY ==========
   caddy:
-    image: caddy:2-alpine
+    image: aztech-caddy:latest
     container_name: aztech-caddy
     restart: unless-stopped
     ports:
@@ -128,7 +128,7 @@ services:
   #     authserver-db:latest
   #     authserver-backend:latest
   #     authserver-frontend:latest
-  #     caddy:2-alpine
+  #     aztech-caddy:latest
   #   volumes:
   #     - /tmp/trivy-cache:/root/.cache/trivy
   #   networks:
