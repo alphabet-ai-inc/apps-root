@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     environment: # Inline defaults instead of env_file for simplicity in testing
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: postgres
     volumes:
       - postgres_data:/var/lib/postgresql # this is the default data directory for postgres
