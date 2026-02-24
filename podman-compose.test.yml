@@ -37,7 +37,6 @@ services:
       -c pg_stat_statements.max=10000
     security_opt:
       - no-new-privileges:true
-      start_period: 30s
 
   # ========== TEST BACKEND ==========
   authserver-test-backend:
