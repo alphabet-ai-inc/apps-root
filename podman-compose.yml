@@ -19,7 +19,7 @@ services:
       - aztech-network
     healthcheck:
       test: [
-          "CMD-SHELL",
+          CMD-SHELL,
           "pg_isready -U postgres -d postgres || exit 1", # Hardcode defaults to avoid variable issues
         ]
       interval: 5s
@@ -63,6 +63,7 @@ services:
     env_file: ./authserver/backend/.env
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_HOST: authserver-db
     depends_on:
       authserver-db:
         condition: service_healthy

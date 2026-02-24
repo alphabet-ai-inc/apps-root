@@ -5,6 +5,7 @@
 services:
   # ========== TEST DATABASE ==========
   authserver-test-db:
+    # trunk-ignore(prettier/SyntaxError)
     image: postgres:18
     container_name: authserver-test-db
     restart: unless-stopped
@@ -16,11 +17,14 @@ services:
       - postgres_test_data:/var/lib/postgresql
       - ./authserver/database/init-security.sql:/docker-entrypoint-initdb.d/01-security.sql:ro
     ports:
-      - "5433:5432" # Different host port to avoid conflict with production (5432)
+      - 5433:5432 # Different host port to avoid conflict with production (5432)
     networks:
       - aztech-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres || exit 1"]
+      test: [
+        CMD-SHELL,
+        "pg_isready -U postgres -d postgres || exit 1",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
