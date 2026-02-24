@@ -45,6 +45,9 @@ services:
     container_name: authserver-test-backend
     restart: unless-stopped
     env_file: ./authserver-test/backend/.env
+    environment:
+      POSTGRES_HOST: authserver-test-db
+      DISABLE_TLS: "true"
     depends_on:
       authserver-test-db:
         condition: service_healthy
