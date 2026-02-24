@@ -64,6 +64,7 @@ services:
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_HOST: authserver-db
+      DISABLE_TLS: "true"
     depends_on:
       authserver-db:
         condition: service_healthy
