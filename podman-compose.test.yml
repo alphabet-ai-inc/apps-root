@@ -1,6 +1,6 @@
 # Compatible with podman-compose for improved security (rootless containers)
 # docker-compose.test.yml - Place this in apps-root repository
-# Copy to /opt/authserver-test/docker-compose.yml during test deployment
+# Copy to /opt/podman-compose.yml during test deployment
 
 services:
   # ========== TEST DATABASE ==========
@@ -40,10 +40,10 @@ services:
 
   # ========== TEST BACKEND ==========
   authserver-test-backend:
-    image: authserver-test-backend:latest
+    image: localhost/authserver-test-backend:latest
     container_name: authserver-test-backend
     restart: unless-stopped
-    env_file: ./authserver-test/backend/.env
+    env_file: ./authserver/backend/.env
     environment:
       POSTGRES_HOST: authserver-test-db
       DISABLE_TLS: "true"
@@ -56,7 +56,7 @@ services:
 
   # ========== TEST FRONTEND ==========
   authserver-test-frontend:
-    image: authserver-test-frontend:latest
+    image: localhost/authserver-test-frontend:latest
     container_name: authserver-test-frontend
     restart: unless-stopped
     networks:
