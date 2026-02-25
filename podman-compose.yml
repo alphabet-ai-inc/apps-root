@@ -51,7 +51,6 @@ services:
     networks:
       - aztech-network
     depends_on:
-      # - django-landing-app
       - authserver-frontend
       - authserver-backend
 
@@ -70,6 +69,12 @@ services:
         condition: service_healthy
     networks:
       - aztech-network
+    healthcheck:  # Added for better readiness detection
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]  # Adjust port/path as needed
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   authserver-frontend:
     build: ./authserver/frontend
@@ -77,6 +82,15 @@ services:
     restart: unless-stopped
     networks:
       - aztech-network
+    depends_on:  # Added to ensure it starts after backend
+      authserver-backend:
+        condition: service_healthy
+    healthcheck:  # Added for better readiness detection
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]  # Adjust port as needed
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ========== DJANGO LANDING ==========
   # django-landing-app:
