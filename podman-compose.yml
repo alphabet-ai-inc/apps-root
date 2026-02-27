@@ -37,7 +37,7 @@ services:
 
   # ========== AUTH SERVER ==========
   authserver-backend:
-    build: ./authserver/backend
+    image: localhost/srv_authserver-backend:latest
     container_name: authserver-backend
     restart: unless-stopped
     env_file: ./authserver/backend/.env
@@ -58,7 +58,7 @@ services:
       start_period: 30s
 
   authserver-frontend:
-    build: ./authserver/frontend
+    image: localhost/srv_authserver-frontend:latest
     container_name: authserver-frontend
     restart: unless-stopped
     networks:
