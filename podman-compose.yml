@@ -4,7 +4,6 @@ services:
   # ========== POSTGRES DATABASE ==========
   authserver-db:
     image: postgres:18 # Use official image for default installation
-    container_name: authserver-db
     restart: unless-stopped
     environment: # Inline defaults instead of env_file for simplicity in testing
       POSTGRES_USER: postgres
@@ -38,7 +37,6 @@ services:
   # ========== AUTH SERVER ==========
   authserver-backend:
     image: localhost/srv_authserver-backend:latest
-    container_name: authserver-backend
     restart: unless-stopped
     env_file: ./authserver/backend/.env
     environment:
@@ -59,7 +57,6 @@ services:
 
   authserver-frontend:
     image: localhost/srv_authserver-frontend:latest
-    container_name: authserver-frontend
     restart: unless-stopped
     networks:
       - aztech-network
