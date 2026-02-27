@@ -35,25 +35,6 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # ========== CADDY PROXY ==========
-  caddy:
-    image: aztech-caddy:latest
-    container_name: aztech-caddy
-    restart: unless-stopped
-    ports:
-      - 80:80
-      - 443:443
-      - 443:443/udp
-    volumes:
-      - /srv/aztech-caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    networks:
-      - aztech-network
-    depends_on:
-      - authserver-frontend
-      - authserver-backend
-
   # ========== AUTH SERVER ==========
   authserver-backend:
     build: ./authserver/backend
@@ -159,8 +140,6 @@ networks:
 
 # SINGLE volumes section at the end
 volumes:
-  caddy_data:
-  caddy_config:
   postgres_data:
   # django_db_data:
   # portainer_data:
