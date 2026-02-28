@@ -1,12 +1,9 @@
 # Compatible with podman-compose for improved security (rootless containers)
-# docker-compose.test.yml - Place this in apps-root repository
-# Copy to /opt/podman-compose.yml during test deployment
-
+# Copy to parent directory of all applications /srv/test
 services:
   # ========== TEST DATABASE ==========
   authserver-test-db:
-    # trunk-ignore(prettier/SyntaxError)
-    image: postgres:18
+    image: authserver-test-db:latest
     container_name: authserver-test-db
     restart: unless-stopped
     environment:
@@ -19,7 +16,7 @@ services:
     ports:
       - 5433:5432 # Different host port to avoid conflict with production (5432)
     networks:
-      - aztech-network
+      - aztech-test-network
     healthcheck:
       test: [
         CMD-SHELL,
@@ -29,7 +26,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-    # Security hardening: Disable dangerous functions that could be exploited
     command: >
       postgres
       -c shared_preload_libraries=pg_stat_statements
@@ -40,31 +36,44 @@ services:
 
   # ========== TEST BACKEND ==========
   authserver-test-backend:
-    image: localhost/authserver-test-backend:latest
+    build: ./authserver/backend
     container_name: authserver-test-backend
     restart: unless-stopped
-    env_file: ./authserver/backend/.env
+    env_file: ./authserver/backend/.env.test
     environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_HOST: authserver-test-db
       DISABLE_TLS: "true"
     depends_on:
       authserver-test-db:
         condition: service_healthy
     networks:
-      - aztech-network
-    # No ports exposed - runs internally, accessed via Caddy reverse proxy
+      - aztech-test-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ========== TEST FRONTEND ==========
   authserver-test-frontend:
-    image: localhost/authserver-test-frontend:latest
+    build: ./authserver/frontend
     container_name: authserver-test-frontend
     restart: unless-stopped
     networks:
-      - aztech-network
-    # No ports exposed - runs internally, accessed via Caddy reverse proxy
+      - aztech-test-network
+    depends_on:
+      authserver-test-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ========== SECURITY SCANNING ==========
-  # Optional security scanner - uncomment to enable vulnerability scanning
   # security-scanner-test:
   #   image: aquasecurity/trivy:latest
   #   container_name: security-scanner-test
@@ -78,17 +87,16 @@ services:
   #     authserver-test-db:latest
   #     authserver-test-backend:latest
   #     authserver-test-frontend:latest
-  #     caddy:2-alpine
   #   volumes:
   #     - /tmp/trivy-cache:/root/.cache/trivy
   #   networks:
-  #     - aztech-network
+  #     - aztech-test-network
 
-# Use existing network shared with production Caddy
+# Separate network for test environment
 networks:
-  aztech-network:
-    external: true # Use existing network instead of creating new one
-    name: srv_aztech-network # Or use the actual network name
+  aztech-test-network:
+    driver: bridge
+
 # Separate volume for test data
 volumes:
   postgres_test_data:

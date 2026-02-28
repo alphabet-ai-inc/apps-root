@@ -3,29 +3,28 @@
 services:
   # ========== POSTGRES DATABASE ==========
   authserver-db:
-    image: postgres:18 # Use official image for default installation
+    image: postgres:18
     restart: unless-stopped
-    environment: # Inline defaults instead of env_file for simplicity in testing
-      POSTGRES_USER: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}  # Reads from .env file
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: postgres
+      POSTGRES_DB: ${POSTGRES_DB}  # Reads from .env file
     volumes:
-      - postgres_data:/var/lib/postgresql # this is the default data directory for postgres
+      - postgres_data:/var/lib/postgresql
       - ./authserver/database/init-security.sql:/docker-entrypoint-initdb.d/01-security.sql:ro
     ports:
-      - 5432:5432
+      - "5432:5432"
     networks:
-      - aztech-network
+      aztech-network:
+        aliases:
+          - authserver-db
+          - postgres
     healthcheck:
-      test: [
-          CMD-SHELL,
-          "pg_isready -U postgres -d postgres || exit 1", # Hardcode defaults to avoid variable issues
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 30s
-    # Security hardening: Disable dangerous functions that could be exploited
     command: >
       postgres
       -c shared_preload_libraries=pg_stat_statements
@@ -34,7 +33,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # ========== AUTH SERVER ==========
+  # ========== AUTH SERVER BACKEND ==========
   authserver-backend:
     image: localhost/srv_authserver-backend:latest
     restart: unless-stopped
@@ -42,101 +41,47 @@ services:
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_HOST: authserver-db
+      POSTGRES_USER: ${POSTGRES_USER}  # Explicitly pass from .env
+      POSTGRES_DB: ${POSTGRES_DB}      # Explicitly pass from .env
       DISABLE_TLS: "true"
+    ports:
+      - "8080:8080"
     depends_on:
       authserver-db:
         condition: service_healthy
     networks:
       - aztech-network
-    healthcheck:  # Added for better readiness detection
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]  # Adjust port/path as needed
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
+  # ========== AUTH SERVER FRONTEND ==========
   authserver-frontend:
     image: localhost/srv_authserver-frontend:latest
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     networks:
       - aztech-network
-    depends_on:  # Added to ensure it starts after backend
+    depends_on:
       authserver-backend:
-        condition: service_healthy
-    healthcheck:  # Added for better readiness detection
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]  # Adjust port as needed
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  # ========== DJANGO LANDING ==========
-  # django-landing-app:
-  #   image: django-landing-app
-  #   container_name: django-landing-app
-  #   restart: unless-stopped
-  #   ports:
-  #     - 8000:8000
-  #   networks:
-  #     - aztech-network
-
-  # django-landing-db:
-  #   image: postgres:18
-  #   container_name: django-landing-db
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_DB: ${DJANGO_DB_NAME}
-  #     POSTGRES_USER: ${DJANGO_DB_USER}
-  #     POSTGRES_PASSWORD: ${DJANGO_DB_PASSWORD}
-  #   volumes:
-  #     - django_db_data:/var/lib/postgresql/data
-  #   ports:
-  #     - 5433:5432
-  #   networks:
-  #     - aztech-network
-
-  # ========== PORTAINER ==========
-  # portainer:
-  #   image: portainer/portainer-ce:latest
-  #   container_name: portainer
-  #   restart: unless-stopped
-  #   ports:
-  #     - 9000:9000
-  #     - 9443:9443
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #     - portainer_data:/data
-  #   networks:
-  #     - aztech-network
-
-  # ========== SECURITY SCANNING ==========
-  # Optional security scanner - uncomment to enable vulnerability scanning
-  # security-scanner:
-  #   image: aquasecurity/trivy:latest
-  #   container_name: security-scanner
-  #   profiles: ["security"]
-  #   command: >
-  #     trivy image
-  #     --format table
-  #     --exit-code 1
-  #     --ignore-unfixed
-  #     --vuln-type os,library
-  #     authserver-db:latest
-  #     authserver-backend:latest
-  #     authserver-frontend:latest
-  #     aztech-caddy:latest
-  #   volumes:
-  #     - /tmp/trivy-cache:/root/.cache/trivy
-  #   networks:
-  #     - aztech-network
+        condition: service_healthy  # Changed from service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 # SINGLE networks section at the end
 networks:
   aztech-network:
-    driver: bridge
+    external: true
+    name: srv_aztech-network
 
 # SINGLE volumes section at the end
 volumes:
   postgres_data:
-  # django_db_data:
-  # portainer_data:
