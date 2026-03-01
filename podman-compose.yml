@@ -37,13 +37,22 @@ services:
   authserver-backend:
     image: localhost/srv_authserver-backend:latest
     restart: unless-stopped
-    env_file: ./authserver/backend/.env
     environment:
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: authserver-db
-      POSTGRES_USER: ${POSTGRES_USER}  # Explicitly pass from .env
-      POSTGRES_DB: ${POSTGRES_DB}      # Explicitly pass from .env
+      POSTGRES_EXTERNAL_PORT: 5432
       DISABLE_TLS: "true"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      SESSION_AUTH_KEY: ${SESSION_AUTH_KEY}
+      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+      DOMAIN: ${DOMAIN}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      PORT: ${APP_PORT}
     ports:
       - "8080:8080"
     depends_on:
@@ -52,7 +61,7 @@ services:
     networks:
       - aztech-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -70,7 +79,7 @@ services:
       authserver-backend:
         condition: service_healthy  # Changed from service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
