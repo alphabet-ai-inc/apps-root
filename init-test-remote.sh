@@ -70,8 +70,10 @@ git clone "${AUTH_URL}/${AUTH_REPO}" /opt/authserver
 
 echo -e "${YELLOW}Preparing compose and scripts...${NC}"
 cp -f /opt/apps-root/podman-compose.test.yml /opt/podman-compose.yml
+cp -f /opt/apps-root/start-test-manual.sh /opt/start-test-manual.sh
+cp -f /opt/apps-root/stop-test-manual.sh /opt/stop-test-manual.sh
 cp -f /opt/apps-root/init-test-remote.sh /opt/init-test-remote.sh
-chmod +x /opt/init-test-remote.sh
+chmod +x /opt/start-test-manual.sh /opt/stop-test-manual.sh /opt/init-test-remote.sh
 sed -i 's|image: postgres:18|image: localhost/opt_authserver-test-db:latest|' /opt/podman-compose.yml
 cp /opt/authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
@@ -135,7 +137,7 @@ podman run -d \
   --publish 5433:5432 \
   --volume postgres_test_data:/var/lib/postgresql \
   --env POSTGRES_USER="$POSTGRES_USER" \
-  --env POSTGRES_PASSWORD="$DB_PASSWORD" \
+  --env POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
   --env POSTGRES_DB=postgres \
   localhost/opt_authserver-test-db:latest \
   postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c pg_stat_statements.max=10000
@@ -166,40 +168,33 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
   exit 1
 fi
 
-TEST_DB_NAME="${POSTGRES_DB}_test"
-if podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '$TEST_DB_NAME');" | grep -q " t"; then
-  echo "Database $TEST_DB_NAME already exists"
-else
-  podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$TEST_DB_NAME\";"
-fi
+echo -e "${YELLOW}Running start-test-manual.sh with test environment...${NC}"
+export TEST_DB_NAME="${POSTGRES_DB}_test"
 
-LATEST_BACKUP=$(ls -t /tmp/authserver*_backup.sql 2>/dev/null | head -1)
-if [ -n "$LATEST_BACKUP" ] && [ -f "$LATEST_BACKUP" ]; then
-  echo "Restoring from $LATEST_BACKUP"
-  awk -v u="$POSTGRES_USER" -v db="$TEST_DB_NAME" 'BEGIN{IGNORECASE=1} {
-      line=$0
-      gsub(/"/, "", line)
-      if (line ~ "^[[:space:]]*(CREATE ROLE|CREATE USER|ALTER ROLE)[[:space:]]+" u "([[:space:]]|;|$)") next
-      if (line ~ "^[[:space:]]*CREATE[[:space:]]+DATABASE[[:space:]]+" db "([[:space:]]|;|$)") next
-      if (line ~ "^[[:space:]]*ALTER[[:space:]]+DATABASE[[:space:]]+" db "([[:space:]]|;|$)") next
-      print
-  }' "$LATEST_BACKUP" | podman exec -i authserver-test-db psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$TEST_DB_NAME"
-fi
+# Explicitly export all required variables for start-test-manual.sh
+export GITHUB_TOKEN
+export GITHUB_ORG
+export AUTH_REPO
+export APPS_ROOT_REPO
+export POSTGRES_USER
+export POSTGRES_PASSWORD
+export POSTGRES_DB
+export JWT_SECRET
+export JWT_ISSUER
+export JWT_AUDIENCE
+export SESSION_AUTH_KEY
+export SESSION_ENCRYPTION_KEY
+export COOKIE_DOMAIN
+export DOMAIN
+export ALLOWED_ORIGINS
+export TEST_DOMAIN
+export TEST_BACKEND_URL
+export TEST_FRONTEND_URL
+export TEST_DB_PORT
+export TEST_BACKEND_PORT
+export VITE_BACKEND_URL
 
-podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "ALTER DATABASE \"$TEST_DB_NAME\" OWNER TO \"$POSTGRES_USER\";"
-podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "ALTER SYSTEM SET password_encryption = 'scram-sha-256';"
-podman exec authserver-test-db bash -c '
-  echo "# TYPE  DATABASE        USER            ADDRESS                 METHOD" > $PGDATA/pg_hba.conf
-  echo "    local   all             all                                     trust" >> $PGDATA/pg_hba.conf
-  echo "    host    all             all             127.0.0.1/32            scram-sha-256" >> $PGDATA/pg_hba.conf
-  echo "    host    all             all             ::1/128                 scram-sha-256" >> $PGDATA/pg_hba.conf
-  echo "    host    all             all             0.0.0.0/0               scram-sha-256" >> $PGDATA/pg_hba.conf
-  chown postgres:postgres $PGDATA/pg_hba.conf
-  chmod 600 $PGDATA/pg_hba.conf
-'
-podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "SELECT pg_reload_conf();"
-
-echo -e "${YELLOW}Starting remaining test services...${NC}"
-podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-backend authserver-test-frontend
+cd /opt
+bash /opt/start-test-manual.sh
 
 echo -e "${GREEN}✅ Test remote init completed${NC}"
