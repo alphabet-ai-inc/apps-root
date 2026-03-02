@@ -100,6 +100,20 @@ echo -e "${YELLOW}Running start-manual.sh with CI environment...${NC}"
 export DB_PASSWORD="$POSTGRES_PASSWORD"
 export AUTH_REPO_URL="${AUTH_URL}/${AUTH_REPO}"
 
+# Ensure go, node/npm are in PATH for non-interactive SSH sessions
+# (these tools are added via .bashrc which is not sourced in non-interactive SSH)
+export PATH="/usr/local/go/bin:$HOME/go/bin:/usr/local/bin:/usr/bin:$PATH"
+# Source nvm if present (node version manager)
+if [ -f "$HOME/.nvm/nvm.sh" ]; then
+  export NVM_DIR="$HOME/.nvm"
+  # shellcheck disable=SC1091
+  source "$HOME/.nvm/nvm.sh"
+fi
+
+echo "PATH=$PATH"
+echo "go:  $(command -v go || echo 'NOT FOUND')"
+echo "npm: $(command -v npm || echo 'NOT FOUND')"
+
 cd /srv
 bash /srv/start-manual.sh
 
