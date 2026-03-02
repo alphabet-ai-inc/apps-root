@@ -133,7 +133,7 @@ echo -e "${YELLOW}Waiting for test database readiness...${NC}"
 MAX_RETRIES=10
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if podman exec opt_authserver-test-db_1 pg_isready -U "$POSTGRES_USER" -h localhost > /dev/null 2>&1; then
+  if podman exec authserver-test-db pg_isready -U "$POSTGRES_USER" -h localhost > /dev/null 2>&1; then
     break
   fi
   RETRY_COUNT=$((RETRY_COUNT + 1))
@@ -142,15 +142,15 @@ done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
   echo -e "${RED}Database failed to become ready${NC}"
-  podman logs opt_authserver-test-db_1
+  podman logs authserver-test-db
   exit 1
 fi
 
 TEST_DB_NAME="${POSTGRES_DB}_test"
-if podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '$TEST_DB_NAME');" | grep -q " t"; then
+if podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '$TEST_DB_NAME');" | grep -q " t"; then
   echo "Database $TEST_DB_NAME already exists"
 else
-  podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$TEST_DB_NAME\";"
+  podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$TEST_DB_NAME\";"
 fi
 
 LATEST_BACKUP=$(ls -t /tmp/authserver*_backup.sql 2>/dev/null | head -1)
@@ -163,12 +163,12 @@ if [ -n "$LATEST_BACKUP" ] && [ -f "$LATEST_BACKUP" ]; then
       if (line ~ "^[[:space:]]*CREATE[[:space:]]+DATABASE[[:space:]]+" db "([[:space:]]|;|$)") next
       if (line ~ "^[[:space:]]*ALTER[[:space:]]+DATABASE[[:space:]]+" db "([[:space:]]|;|$)") next
       print
-  }' "$LATEST_BACKUP" | podman exec -i opt_authserver-test-db_1 psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$TEST_DB_NAME"
+  }' "$LATEST_BACKUP" | podman exec -i authserver-test-db psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$TEST_DB_NAME"
 fi
 
-podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "ALTER DATABASE \"$TEST_DB_NAME\" OWNER TO \"$POSTGRES_USER\";"
-podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "ALTER SYSTEM SET password_encryption = 'scram-sha-256';"
-podman exec opt_authserver-test-db_1 bash -c '
+podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "ALTER DATABASE \"$TEST_DB_NAME\" OWNER TO \"$POSTGRES_USER\";"
+podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "ALTER SYSTEM SET password_encryption = 'scram-sha-256';"
+podman exec authserver-test-db bash -c '
   echo "# TYPE  DATABASE        USER            ADDRESS                 METHOD" > $PGDATA/pg_hba.conf
   echo "    local   all             all                                     trust" >> $PGDATA/pg_hba.conf
   echo "    host    all             all             127.0.0.1/32            scram-sha-256" >> $PGDATA/pg_hba.conf
@@ -177,9 +177,31 @@ podman exec opt_authserver-test-db_1 bash -c '
   chown postgres:postgres $PGDATA/pg_hba.conf
   chmod 600 $PGDATA/pg_hba.conf
 '
-podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "SELECT pg_reload_conf();"
+podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "SELECT pg_reload_conf();"
+
+echo -e "${YELLOW}Starting test database...${NC}"
+podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-db
+
+echo -e "${YELLOW}Waiting for test database to be ready...${NC}"
+MAX_RETRIES=10
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if podman exec authserver-test-db pg_isready -U "$POSTGRES_USER" -d postgres > /dev/null 2>&1; then
+        echo -e "${GREEN}Database is ready!${NC}"
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "Waiting... ($RETRY_COUNT/$MAX_RETRIES)"
+    sleep 3
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo -e "${RED}Database failed to start within timeout${NC}"
+    podman logs authserver-test-db
+    exit 1
+fi
 
 echo -e "${YELLOW}Starting remaining test services...${NC}"
-podman-compose -f podman-compose.yml --project-name opt up -d
+podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-backend authserver-test-frontend
 
 echo -e "${GREEN}✅ Test remote init completed${NC}"
