@@ -94,6 +94,10 @@ git clone "${AUTH_URL}/${AUTH_REPO}" /srv/authserver
 
 echo -e "${YELLOW}Preparing compose and backups...${NC}"
 cp -f /srv/apps-root/podman-compose.yml /srv/podman-compose.yml
+cp -f /srv/apps-root/start-manual.sh /srv/start-manual.sh
+cp -f /srv/apps-root/stop-manual.sh /srv/stop-manual.sh
+cp -f /srv/apps-root/init-remote.sh /srv/init-remote.sh
+chmod +x /srv/start-manual.sh /srv/stop-manual.sh /srv/init-remote.sh
 sed -i 's|image: postgres:18|image: localhost/srv_authserver-db:latest|' /srv/podman-compose.yml
 cp /srv/authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
@@ -102,6 +106,6 @@ export DB_PASSWORD="$POSTGRES_PASSWORD"
 export AUTH_REPO_URL="${AUTH_URL}/${AUTH_REPO}"
 
 cd /srv
-bash /srv/apps-root/start-manual.sh
+bash /srv/start-manual.sh
 
 echo -e "${GREEN}✅ Remote init completed${NC}"
