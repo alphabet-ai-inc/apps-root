@@ -78,6 +78,10 @@ echo -e "${YELLOW}Setting up network...${NC}"
 podman network rm srv_aztech-network 2>/dev/null || true
 podman network create srv_aztech-network
 
+echo -e "${YELLOW}Cleaning repository directories...${NC}"
+sudo rm -rf /srv/apps-root /srv/authserver /srv/podman-compose.yml /srv/start-manual.sh /srv/stop-manual.sh /srv/init-remote.sh 2>/dev/null || \
+  rm -rf /srv/apps-root /srv/authserver /srv/podman-compose.yml /srv/start-manual.sh /srv/stop-manual.sh /srv/init-remote.sh
+
 echo -e "${YELLOW}Cloning repositories...${NC}"
 AUTH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com"
 git clone "${AUTH_URL}/${GITHUB_ORG}/${APPS_ROOT_REPO}.git" /srv/apps-root
