@@ -114,6 +114,26 @@ echo "PATH=$PATH"
 echo "go:  $(command -v go || echo 'NOT FOUND')"
 echo "npm: $(command -v npm || echo 'NOT FOUND')"
 
+# Explicitly export all required variables for start-manual.sh
+export GITHUB_TOKEN
+export GITHUB_ORG
+export AUTH_REPO
+export APPS_ROOT_REPO
+export POSTGRES_USER
+export POSTGRES_PASSWORD
+export POSTGRES_DB
+export JWT_SECRET
+export JWT_ISSUER
+export JWT_AUDIENCE
+export SESSION_AUTH_KEY
+export SESSION_ENCRYPTION_KEY
+export COOKIE_DOMAIN
+export DOMAIN
+export ALLOWED_ORIGINS
+export APP_PORT
+export VITE_BACKEND_URL
+export API_DOMAIN
+
 cd /srv
 bash /srv/start-manual.sh
 
