@@ -122,27 +122,47 @@ npm run build
 podman build -t localhost/opt_authserver-test-frontend:latest .
 
 cd /opt/authserver/database
-podman build -t localhost/opt_authserver-test-db:latest .
-
 cd /opt
 
+# Create test network if it doesn't exist
+podman network create aztech-test-network 2>/dev/null || true
+
 echo -e "${YELLOW}Starting test database...${NC}"
-podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-db
+# Start database container manually with explicit environment variables
+podman run -d \
+  --name authserver-test-db \
+  --network aztech-test-network \
+  --publish 5433:5432 \
+  --volume postgres_test_data:/var/lib/postgresql \
+  --env POSTGRES_USER="$POSTGRES_USER" \
+  --env POSTGRES_PASSWORD="$DB_PASSWORD" \
+  --env POSTGRES_DB=postgres \
+  localhost/opt_authserver-test-db:latest \
+  postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c pg_stat_statements.max=10000
 
 echo -e "${YELLOW}Waiting for test database readiness...${NC}"
 MAX_RETRIES=10
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if podman exec authserver-test-db pg_isready -U "$POSTGRES_USER" -h localhost > /dev/null 2>&1; then
-    break
+  # Check if container is running first
+  if podman ps --filter "name=authserver-test-db" --filter "status=running" | grep -q authserver-test-db; then
+    # Container is running, check if database is ready (suppress error output)
+    if podman exec authserver-test-db pg_isready -U "$POSTGRES_USER" -d postgres >/dev/null 2>&1; then
+      echo -e "${GREEN}Database is ready!${NC}"
+      break
+    fi
   fi
   RETRY_COUNT=$((RETRY_COUNT + 1))
+  echo "Waiting... ($RETRY_COUNT/$MAX_RETRIES)"
   sleep 3
 done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
   echo -e "${RED}Database failed to become ready${NC}"
-  podman logs authserver-test-db
+  echo "Container status:"
+  podman ps --filter "name=authserver-test-db"
+  echo "Container logs:"
+  podman logs authserver-test-db | tail -20
   exit 1
 fi
 
@@ -178,28 +198,6 @@ podman exec authserver-test-db bash -c '
   chmod 600 $PGDATA/pg_hba.conf
 '
 podman exec authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "SELECT pg_reload_conf();"
-
-echo -e "${YELLOW}Starting test database...${NC}"
-podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-db
-
-echo -e "${YELLOW}Waiting for test database to be ready...${NC}"
-MAX_RETRIES=10
-RETRY_COUNT=0
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if podman exec authserver-test-db pg_isready -U "$POSTGRES_USER" -d postgres > /dev/null 2>&1; then
-        echo -e "${GREEN}Database is ready!${NC}"
-        break
-    fi
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-    echo "Waiting... ($RETRY_COUNT/$MAX_RETRIES)"
-    sleep 3
-done
-
-if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-    echo -e "${RED}Database failed to start within timeout${NC}"
-    podman logs authserver-test-db
-    exit 1
-fi
 
 echo -e "${YELLOW}Starting remaining test services...${NC}"
 podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-backend authserver-test-frontend
