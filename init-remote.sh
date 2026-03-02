@@ -74,15 +74,6 @@ podman rm --all --force 2>/dev/null || true
 podman volume rm --all --force 2>/dev/null || true
 podman rmi --all --force 2>/dev/null || true
 
-if [ -d /srv/aztech-caddy ]; then
-  mv /srv/aztech-caddy /tmp/aztech-caddy-backup
-fi
-rm -rf /srv/* /srv/.[!.]* 2>/dev/null || true
-mkdir -p /srv
-if [ -d /tmp/aztech-caddy-backup ]; then
-  mv /tmp/aztech-caddy-backup /srv/aztech-caddy
-fi
-
 echo -e "${YELLOW}Setting up network...${NC}"
 podman network rm srv_aztech-network 2>/dev/null || true
 podman network create srv_aztech-network
