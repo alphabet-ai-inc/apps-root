@@ -113,6 +113,10 @@ cp /opt/authserver/backend/.env.test /opt/authserver/backend/.env
 cp /opt/authserver/frontend/.env.test /opt/authserver/frontend/.env
 
 echo -e "${YELLOW}Building test images...${NC}"
+cd /opt/authserver/database
+podman build -t localhost/opt_authserver-test-db:latest .
+cd /opt
+
 cd /opt/authserver/backend
 go mod download
 CGO_ENABLED=0 GOOS=linux go build -o authserver .
@@ -123,7 +127,6 @@ npm ci --silent
 npm run build
 podman build -t localhost/opt_authserver-test-frontend:latest .
 
-cd /opt/authserver/database
 cd /opt
 
 # Create test network if it doesn't exist
