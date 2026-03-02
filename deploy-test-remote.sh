@@ -38,15 +38,11 @@ git config --global credential.helper store
 echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 chmod 600 ~/.git-credentials
 
-for repo in authserver apps-root aztech-caddy; do
+for repo in authserver apps-root; do
   if [ -d "$repo/.git" ]; then
     (cd "$repo" && git pull origin main)
   fi
 done
-
-sed -i 's/authserver-backend/authserver-test-backend/g' aztech-caddy/Caddyfile || true
-sed -i 's/authserver-frontend/authserver-test-frontend/g' aztech-caddy/Caddyfile || true
-sed -i 's/authserver-db/authserver-test-db/g' aztech-caddy/Caddyfile || true
 
 cp -f apps-root/podman-compose.test.yml /opt/podman-compose.yml
 
@@ -93,14 +89,6 @@ podman build -t localhost/authserver-test-frontend -f authserver/frontend/Docker
 export DB_PASSWORD="$POSTGRES_PASSWORD"
 podman-compose -f podman-compose.yml --project-name opt build authserver-test-backend authserver-test-frontend
 podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-backend authserver-test-frontend
-
-podman stop aztech-caddy || true
-if podman run --rm -v /opt/aztech-caddy/Caddyfile:/etc/caddy/Caddyfile:ro aztech-caddy:latest caddy validate --config /etc/caddy/Caddyfile; then
-  podman start aztech-caddy || true
-else
-  echo "Caddyfile validation failed"
-  exit 1
-fi
 
 rm -f ~/.git-credentials
 git config --global --unset credential.helper || true

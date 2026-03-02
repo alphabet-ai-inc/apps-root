@@ -43,7 +43,7 @@ git config --global credential.helper store
 echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
 chmod 600 ~/.git-credentials
 
-for repo in authserver apps-root aztech-caddy; do
+for repo in authserver apps-root; do
   if [ -d "$repo/.git" ]; then
     (cd "$repo" && git pull origin main)
   fi
@@ -91,8 +91,6 @@ cd /srv
 export DB_PASSWORD="$POSTGRES_PASSWORD"
 podman-compose -f podman-compose.yml --project-name srv build authserver-backend authserver-frontend
 podman-compose -f podman-compose.yml --project-name srv up -d authserver-backend authserver-frontend
-
-podman restart aztech-caddy || true
 
 rm -f ~/.git-credentials
 git config --global --unset credential.helper || true
