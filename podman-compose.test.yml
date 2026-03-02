@@ -1,15 +1,15 @@
 # Compatible with podman-compose for improved security (rootless containers)
-# Copy to parent directory of all applications /srv/test
+# Copy to parent directory of all applications /opt
 services:
   # ========== TEST DATABASE ==========
   authserver-test-db:
-    image: authserver-test-db:latest
+    image: localhost/opt_authserver-test-db:latest
     container_name: authserver-test-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_test_data:/var/lib/postgresql
       - ./authserver/database/init-security.sql:/docker-entrypoint-initdb.d/01-security.sql:ro
@@ -18,10 +18,7 @@ services:
     networks:
       - aztech-test-network
     healthcheck:
-      test: [
-        CMD-SHELL,
-        "pg_isready -U postgres -d postgres || exit 1",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -36,42 +33,58 @@ services:
 
   # ========== TEST BACKEND ==========
   authserver-test-backend:
-    build: ./authserver/backend
+    image: localhost/opt_authserver-test-backend:latest
     container_name: authserver-test-backend
     restart: unless-stopped
     env_file: ./authserver/backend/.env.test
     environment:
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: authserver-test-db
+      POSTGRES_EXTERNAL_PORT: 5432
       DISABLE_TLS: "true"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      SESSION_AUTH_KEY: ${SESSION_AUTH_KEY}
+      SESSION_ENCRYPTION_KEY: ${SESSION_ENCRYPTION_KEY}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+      DOMAIN: ${DOMAIN}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      PORT: ${APP_PORT}
+    ports:
+      - "8081:8080"
     depends_on:
       authserver-test-db:
         condition: service_healthy
     networks:
       - aztech-test-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--method=GET", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # ========== TEST FRONTEND ==========
   authserver-test-frontend:
-    build: ./authserver/frontend
+    image: localhost/opt_authserver-test-frontend:latest
     container_name: authserver-test-frontend
     restart: unless-stopped
+    ports:
+      - "4000:3000"
     networks:
       - aztech-test-network
     depends_on:
       authserver-test-backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # ========== SECURITY SCANNING ==========
   # security-scanner-test:
