@@ -128,7 +128,7 @@ echo -e "${YELLOW}Building backend container...${NC}"
 cd authserver/backend
 go mod download
 CGO_ENABLED=0 GOOS=linux go build -o authserver .
-podman build -t localhost/opt_authserver-backend:latest .
+podman build -t opt_authserver-test-backend:latest .
 cd ..
 echo -e "${GREEN}Backend container built${NC}"
 
@@ -136,7 +136,7 @@ echo -e "${YELLOW}Building frontend container...${NC}"
 cd /opt/authserver/frontend
 npm ci --silent
 npm run build
-podman build -t localhost/opt_authserver-frontend:latest .
+podman build -t opt_authserver-test-frontend:latest .
 cd ..
 echo -e "${GREEN}Frontend container built${NC}"
 
