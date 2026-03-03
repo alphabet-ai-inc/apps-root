@@ -26,26 +26,30 @@ if ! command_exists podman-compose; then
 fi
 
 # Stop services
-echo -e "${YELLOW}Stopping test services...${NC}"
+echo -e "${YELLOW}Stopping services...${NC}"
 podman-compose -f podman-compose.yml --project-name opt down || true
 
 # Remove containers
-echo -e "${YELLOW}Removing test containers...${NC}"
+echo -e "${YELLOW}Removing containers...${NC}"
 podman stop $(podman ps -aq --filter "label=com.docker.compose.project=opt") 2>/dev/null || true
 podman rm $(podman ps -aq --filter "label=com.docker.compose.project=opt") 2>/dev/null || true
 
 # Remove volumes (optional - comment out if you want to keep data)
-echo -e "${YELLOW}Removing test volumes...${NC}"
+echo -e "${YELLOW}Removing volumes...${NC}"
 podman volume rm postgres_test_data 2>/dev/null || true
 
 # Remove network (force if necessary)
-echo -e "${YELLOW}Removing test network...${NC}"
+echo -e "${YELLOW}Removing network...${NC}"
 podman network rm aztech-test-network 2>/dev/null || echo -e "${BLUE}Network aztech-test-network not found or still in use${NC}"
 
 # Remove images (optional - comment out if you want to keep built images)
-echo -e "${YELLOW}Removing test images...${NC}"
-podman rmi localhost/opt_authserver-test-backend:latest 2>/dev/null || true
-podman rmi localhost/opt_authserver-test-frontend:latest 2>/dev/null || true
-podman rmi localhost/opt_authserver-test-db:latest 2>/dev/null || true
+echo -e "${YELLOW}Removing images...${NC}"
+podman rmi localhost/opt_authserver-backend:latest 2>/dev/null || true
+podman rmi localhost/opt_authserver-frontend:latest 2>/dev/null || true
+podman rmi localhost/opt_authserver-db:latest 2>/dev/null || true
 
-echo -e "${GREEN}Test cleanup complete${NC}"
+echo -e "${GREEN}Cleanup complete!${NC}"
+
+# Show remaining containers
+echo -e "${BLUE}Remaining containers:${NC}"
+podman ps -a
