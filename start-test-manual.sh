@@ -133,15 +133,12 @@ cd ..
 echo -e "${GREEN}Backend container built${NC}"
 
 echo -e "${YELLOW}Building frontend container...${NC}"
-cd authserver/frontend
+cd ../frontend
 npm ci --silent
 npm run build
 podman build -t localhost/opt_authserver-frontend:latest .
 cd ..
 echo -e "${GREEN}Frontend container built${NC}"
-
-# Go back to /opt directory
-cd /opt
 
 # Start database first
 echo -e "${YELLOW}Starting database container...${NC}"
