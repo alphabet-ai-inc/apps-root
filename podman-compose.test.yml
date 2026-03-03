@@ -62,7 +62,7 @@ services:
     networks:
       - aztech-test-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--method=GET", "http://localhost:8081/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--method=GET", "http://127.0.0.1:8081/health"]
       interval: 30s
       timeout: 10s
       retries: 3
