@@ -100,7 +100,7 @@ POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$DB_PASSWORD
 POSTGRES_DB=$POSTGRES_DB
 POSTGRES_EXTERNAL_PORT=5432
-POSTGRES_HOST=authserver-db
+POSTGRES_HOST=opt_authserver-test-db
 JWT_SECRET=$JWT_SECRET
 JWT_ISSUER=$JWT_ISSUER
 JWT_AUDIENCE=$JWT_AUDIENCE
@@ -151,7 +151,7 @@ echo -e "${YELLOW}Waiting for database to be ready...${NC}"
 MAX_RETRIES=10
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if podman exec opt_authserver-test-db pg_isready -U "$POSTGRES_USER" -h localhost > /dev/null 2>&1; then
+    if podman exec opt_authserver-test-db_1 pg_isready -U "$POSTGRES_USER" -h localhost > /dev/null 2>&1; then
         echo -e "${GREEN}Database is ready!${NC}"
         break
     fi
@@ -162,7 +162,7 @@ done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     echo -e "${RED}Database failed to start within timeout${NC}"
-    podman logs opt_authserver-test-db
+    podman logs opt_authserver-test-db_1
     exit 1
 fi
 
@@ -173,20 +173,20 @@ echo -e "${YELLOW}Initializing database user and permissions...${NC}"
 # So we connect as the configured user instead of 'postgres'
 
 # Create user if it doesn't exist (but it should already exist as superuser)
-if podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname = '$POSTGRES_USER');" | grep -q " t"; then
+if podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname = '$POSTGRES_USER');" | grep -q " t"; then
     echo "User $POSTGRES_USER already exists as superuser, ensuring password is correct..."
-    podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "ALTER USER \"$POSTGRES_USER\" WITH PASSWORD '$DB_PASSWORD';"
+    podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "ALTER USER \"$POSTGRES_USER\" WITH PASSWORD '$DB_PASSWORD';"
     echo "Password updated for user $POSTGRES_USER"
 else
     echo "User $POSTGRES_USER should already exist as superuser from Docker image"
 fi
 
 # Create database if it doesn't exist
-if podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '$POSTGRES_DB');" | grep -q " t"; then
+if podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -t -c "SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '$POSTGRES_DB');" | grep -q " t"; then
     echo "Database $POSTGRES_DB already exists"
 else
     echo "Creating database $POSTGRES_DB..."
-    podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$POSTGRES_DB\";"
+    podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$POSTGRES_DB\";"
 fi
 
 # === RESTORE DATABASE BACKUP IF EXISTS (same logic as init.yml) ===
@@ -204,25 +204,25 @@ if [ -n "$LATEST_BACKUP" ] && [ -f "$LATEST_BACKUP" ]; then
         if (line ~ "^[[:space:]]*ALTER[[:space:]]+DATABASE[[:space:]]+" db "([[:space:]]|;|$)") next
         print
     }' "$LATEST_BACKUP" \
-        | podman exec -i opt_authserver-test-db psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+        | podman exec -i opt_authserver-test-db_1 psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"
     echo -e "${GREEN}Database backup restored${NC}"
 
     # Ensure user password is set to current value after restore
-    podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "ALTER USER \"$POSTGRES_USER\" WITH PASSWORD '$DB_PASSWORD';"
+    podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "ALTER USER \"$POSTGRES_USER\" WITH PASSWORD '$DB_PASSWORD';"
 else
     echo "No backup found at /tmp/authserver*_backup.sql"
 fi
 
 # Set database owner
-podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "ALTER DATABASE \"$POSTGRES_DB\" OWNER TO \"$POSTGRES_USER\";"
+podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "ALTER DATABASE \"$POSTGRES_DB\" OWNER TO \"$POSTGRES_USER\";"
 
 # Configure SCRAM-SHA-256 authentication
 echo -e "${YELLOW}Configuring SCRAM-SHA-256 authentication...${NC}"
-podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "ALTER SYSTEM SET password_encryption = 'scram-sha-256';"
+podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "ALTER SYSTEM SET password_encryption = 'scram-sha-256';"
 
 # Update pg_hba.conf
 echo -e "${YELLOW}Updating pg_hba.conf...${NC}"
-podman exec opt_authserver-test-db bash -c "
+podman exec opt_authserver-test-db_1 bash -c "
     echo '# TYPE  DATABASE        USER            ADDRESS                 METHOD' > \$PGDATA/pg_hba.conf
     echo '    local   all             all                                     trust' >> \$PGDATA/pg_hba.conf
     echo '    host    all             all             127.0.0.1/32            scram-sha-256' >> \$PGDATA/pg_hba.conf
@@ -233,18 +233,18 @@ podman exec opt_authserver-test-db bash -c "
 "
 
 # Reload PostgreSQL configuration
-podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "SELECT pg_reload_conf();"
+podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "SELECT pg_reload_conf();"
 
 echo -e "${GREEN}Database initialization complete${NC}"
 
 # Test database connection
 echo -e "${YELLOW}Testing database connection...${NC}"
-if podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version();" > /dev/null 2>&1; then
+if podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT version();" > /dev/null 2>&1; then
     echo -e "${GREEN}Database connection test successful${NC}"
 else
     echo -e "${RED}Database connection test failed${NC}"
     echo "Trying to connect to postgres database instead..."
-    if podman exec opt_authserver-test-db psql -U "$POSTGRES_USER" -d postgres -c "SELECT version();" > /dev/null 2>&1; then
+    if podman exec opt_authserver-test-db_1 psql -U "$POSTGRES_USER" -d postgres -c "SELECT version();" > /dev/null 2>&1; then
         echo -e "${YELLOW}Connection to postgres database works, but not to $POSTGRES_DB${NC}"
     else
         echo -e "${RED}Cannot connect to database at all${NC}"
