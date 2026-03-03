@@ -69,10 +69,6 @@ mkdir -p /srv
 cd /srv
 
 podman-compose -f podman-compose.yml --project-name srv down 2>/dev/null || true
-podman stop --all 2>/dev/null || true
-podman rm --all --force 2>/dev/null || true
-podman volume rm --all --force 2>/dev/null || true
-podman rmi --all --force 2>/dev/null || true
 
 echo -e "${YELLOW}Setting up network...${NC}"
 podman network rm srv_aztech-network 2>/dev/null || true

@@ -31,6 +31,7 @@ required_vars=(
   COOKIE_DOMAIN
   DOMAIN
   ALLOWED_ORIGINS
+  APP_PORT
 )
 
 for v in "${required_vars[@]}"; do
@@ -40,8 +41,8 @@ for v in "${required_vars[@]}"; do
   fi
 done
 
-TEST_DOMAIN="test.${DOMAIN}"
-TEST_BACKEND_URL="${VITE_BACKEND_URL:-https://api.${TEST_DOMAIN}}"
+export API_DOMAIN="${API_DOMAIN:-api.${DOMAIN}}"
+export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://${API_DOMAIN}}"
 
 command_exists() {
   command -v "$1" >/dev/null 2>&1
@@ -68,17 +69,14 @@ mkdir -p /opt
 cd /opt
 
 podman-compose -f podman-compose.yml --project-name opt down 2>/dev/null || true
-podman stop --all 2>/dev/null || true
-podman rm --all --force 2>/dev/null || true
-podman volume rm --all --force 2>/dev/null || true
-podman rmi --all --force 2>/dev/null || true
 
 echo -e "${YELLOW}Setting up network...${NC}"
 podman network rm aztech-test-network 2>/dev/null || true
 podman network create aztech-test-network
 
 echo -e "${YELLOW}Cleaning repository directories...${NC}"
-rm -rf /opt/apps-root /opt/authserver /opt/podman-compose.yml /opt/start-test-manual.sh /opt/stop-test-manual.sh /opt/init-test-remote.sh
+sudo rm -rf /opt/apps-root /opt/authserver /opt/podman-compose.yml /opt/start-test-manual.sh /opt/stop-test-manual.sh /opt/init-test-remote.sh 2>/dev/null || \
+  rm -rf /opt/apps-root /opt/authserver /opt/podman-compose.yml /opt/start-test-manual.sh /opt/stop-test-manual.sh /opt/init-test-remote.sh
 
 echo -e "${YELLOW}Cloning repositories...${NC}"
 AUTH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com"
@@ -128,12 +126,9 @@ export SESSION_ENCRYPTION_KEY
 export COOKIE_DOMAIN
 export DOMAIN
 export ALLOWED_ORIGINS
-export TEST_DOMAIN
-export TEST_BACKEND_URL
-export TEST_FRONTEND_URL="https://app.${TEST_DOMAIN}"
-export TEST_DB_PORT="${TEST_DB_PORT:-5433}"
-export TEST_BACKEND_PORT="${TEST_BACKEND_PORT:-8081}"
+export APP_PORT
 export VITE_BACKEND_URL
+export API_DOMAIN
 
 cd /opt
 bash /opt/start-test-manual.sh
