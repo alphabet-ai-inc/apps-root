@@ -100,7 +100,7 @@ POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$DB_PASSWORD
 POSTGRES_DB=$POSTGRES_DB
 POSTGRES_EXTERNAL_PORT=5432
-POSTGRES_HOST=opt_authserver-test-db
+POSTGRES_HOST=authserver-test-db
 JWT_SECRET=$JWT_SECRET
 JWT_ISSUER=$JWT_ISSUER
 JWT_AUDIENCE=$JWT_AUDIENCE
@@ -260,7 +260,7 @@ echo "POSTGRES_DB=$POSTGRES_DB"
 echo "JWT_SECRET=${JWT_SECRET:0:20}..."
 echo "ALLOWED_ORIGINS=$ALLOWED_ORIGINS"
 echo "VITE_BACKEND_URL=$VITE_BACKEND_URL"
-podman-compose -f podman-compose.yml --project-name opt up -d opt_authserver-test-backend opt_authserver-test-frontend
+podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-backend authserver-test-frontend
 
 echo -e "${GREEN}Services started!${NC}"
 

@@ -35,7 +35,7 @@ services:
       - no-new-privileges:true
 
   # ========== TEST BACKEND ==========
-  authserver-test-backend:
+  opt_authserver-test-backend:
     image: localhost/opt_authserver-test-backend:latest
     restart: unless-stopped
     environment:
@@ -69,7 +69,7 @@ services:
       start_period: 40s
 
   # ========== TEST FRONTEND ==========
-  authserver-test-frontend:
+  opt_authserver-test-frontend:
     image: localhost/opt_authserver-test-frontend:latest
     restart: unless-stopped
     ports:
