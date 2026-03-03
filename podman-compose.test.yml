@@ -55,14 +55,14 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       PORT: ${APP_PORT}
     ports:
-      - "8081:8080"
+      - "8081:8081"
     depends_on:
       authserver-test-db:
         condition: service_healthy
     networks:
       - aztech-test-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--method=GET", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--method=GET", "http://localhost:8081/health"]
       interval: 30s
       timeout: 10s
       retries: 3
