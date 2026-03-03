@@ -3,8 +3,7 @@
 services:
   # ========== TEST DATABASE ==========
   authserver-test-db:
-    image: localhost/opt_authserver-test-db:latest
-    container_name: authserver-test-db
+    image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -16,9 +15,11 @@ services:
     ports:
       - 5433:5432 # Different host port to avoid conflict with production (5432)
     networks:
-      - aztech-test-network
+      aztech-test-network:
+        driver: bridge
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d postgres || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -34,9 +35,7 @@ services:
   # ========== TEST BACKEND ==========
   authserver-test-backend:
     image: localhost/opt_authserver-test-backend:latest
-    container_name: authserver-test-backend
     restart: unless-stopped
-    env_file: ./authserver/backend/.env.test
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -70,7 +69,6 @@ services:
   # ========== TEST FRONTEND ==========
   authserver-test-frontend:
     image: localhost/opt_authserver-test-frontend:latest
-    container_name: authserver-test-frontend
     restart: unless-stopped
     ports:
       - "4000:3000"
@@ -109,7 +107,6 @@ services:
 networks:
   aztech-test-network:
     driver: bridge
-
 # Separate volume for test data
 volumes:
   postgres_test_data:

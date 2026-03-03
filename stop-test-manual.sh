@@ -38,15 +38,10 @@ podman rm $(podman ps -aq --filter "label=com.docker.compose.project=opt") 2>/de
 echo -e "${YELLOW}Removing volumes...${NC}"
 podman volume rm postgres_test_data 2>/dev/null || true
 
-# Remove network (force if necessary)
-echo -e "${YELLOW}Removing network...${NC}"
-podman network rm aztech-test-network 2>/dev/null || echo -e "${BLUE}Network aztech-test-network not found or still in use${NC}"
-
 # Remove images (optional - comment out if you want to keep built images)
 echo -e "${YELLOW}Removing images...${NC}"
 podman rmi localhost/opt_authserver-backend:latest 2>/dev/null || true
 podman rmi localhost/opt_authserver-frontend:latest 2>/dev/null || true
-podman rmi localhost/opt_authserver-db:latest 2>/dev/null || true
 
 echo -e "${GREEN}Cleanup complete!${NC}"
 

@@ -100,7 +100,6 @@ cp -f /opt/apps-root/start-test-manual.sh /opt/start-test-manual.sh
 cp -f /opt/apps-root/stop-test-manual.sh /opt/stop-test-manual.sh
 cp -f /opt/apps-root/init-test-remote.sh /opt/init-test-remote.sh
 chmod +x /opt/start-test-manual.sh /opt/stop-test-manual.sh /opt/init-test-remote.sh
-sed -i 's|image: postgres:18|image: localhost/opt_authserver-test-db:latest|' /opt/podman-compose.yml
 cp /opt/authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
 echo -e "${YELLOW}Running start-test-manual.sh with CI environment...${NC}"

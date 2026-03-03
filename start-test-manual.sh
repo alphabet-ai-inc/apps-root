@@ -123,22 +123,7 @@ echo -e "${GREEN}.env files created${NC}"
 echo -e "${YELLOW}Preparing database backup files...${NC}"
 cp authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
-# Create podman network (if it doesn't exist)
-echo -e "${YELLOW}Setting up podman network...${NC}"
-if podman network ls --format "{{.Name}}" | grep -q "^aztech-test-network$"; then
-    echo -e "${BLUE}Network aztech-test-network already exists, reusing it${NC}"
-else
-    podman network create aztech-test-network
-    echo -e "${GREEN}Network created${NC}"
-fi
-
 # Build containers
-echo -e "${YELLOW}Building database container...${NC}"
-cd authserver/database
-podman build -t localhost/opt_authserver-db:latest .
-cd ..
-echo -e "${GREEN}Database container built${NC}"
-
 echo -e "${YELLOW}Building backend container...${NC}"
 cd backend
 go mod download
