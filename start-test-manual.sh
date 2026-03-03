@@ -133,14 +133,16 @@ cd ..
 echo -e "${GREEN}Backend container built${NC}"
 
 echo -e "${YELLOW}Building frontend container...${NC}"
-cd ../frontend
+cd /opt/authserver/frontend
 npm ci --silent
 npm run build
 podman build -t localhost/opt_authserver-frontend:latest .
 cd ..
 echo -e "${GREEN}Frontend container built${NC}"
 
+
 # Start database first
+cd /opt
 echo -e "${YELLOW}Starting database container...${NC}"
 podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-db
 
