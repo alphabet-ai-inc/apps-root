@@ -75,6 +75,12 @@ echo -e "${YELLOW}Removing production authserver containers (excluding test)...$
 podman stop $(podman ps -aq --filter name=authserver --filter name!=test 2>/dev/null) 2>/dev/null || true
 podman rm --force $(podman ps -aq --filter name=authserver --filter name!=test 2>/dev/null) 2>/dev/null || true
 
+echo -e "${YELLOW}Removing production authserver volumes (excluding test)...${NC}"
+podman volume rm $(podman volume ls -q | grep srv_ 2>/dev/null) 2>/dev/null || true
+
+echo -e "${YELLOW}Removing production authserver images (excluding test)...${NC}"
+podman rmi $(podman images -q localhost/srv_authserver* 2>/dev/null) 2>/dev/null || true
+
 echo -e "${YELLOW}Setting up network...${NC}"
 podman network rm srv_aztech-network 2>/dev/null || true
 podman network create srv_aztech-network

@@ -75,6 +75,12 @@ echo -e "${YELLOW}Removing test containers...${NC}"
 podman stop $(podman ps -aq --filter name=test 2>/dev/null) 2>/dev/null || true
 podman rm --force $(podman ps -aq --filter name=test 2>/dev/null) 2>/dev/null || true
 
+echo -e "${YELLOW}Removing test volumes...${NC}"
+podman volume rm $(podman volume ls -q | grep -E "(test|opt_)" 2>/dev/null) 2>/dev/null || true
+
+echo -e "${YELLOW}Removing test images...${NC}"
+podman rmi $(podman images -q localhost/opt_authserver* 2>/dev/null) 2>/dev/null || true
+
 echo -e "${YELLOW}Setting up network...${NC}"
 podman network rm aztech-test-network 2>/dev/null || true
 podman network create aztech-test-network
