@@ -70,6 +70,11 @@ cd /srv
 
 podman-compose -f podman-compose.yml --project-name srv down 2>/dev/null || true
 
+# Targeted cleanup for production environment (authserver containers but not test)
+echo -e "${YELLOW}Removing production authserver containers (excluding test)...${NC}"
+podman stop $(podman ps -aq --filter name=authserver --filter name!=test 2>/dev/null) 2>/dev/null || true
+podman rm --force $(podman ps -aq --filter name=authserver --filter name!=test 2>/dev/null) 2>/dev/null || true
+
 echo -e "${YELLOW}Setting up network...${NC}"
 podman network rm srv_aztech-network 2>/dev/null || true
 podman network create srv_aztech-network

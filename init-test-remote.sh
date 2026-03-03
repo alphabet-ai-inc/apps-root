@@ -70,6 +70,11 @@ cd /opt
 
 podman-compose -f podman-compose.yml --project-name opt down 2>/dev/null || true
 
+# Targeted cleanup for test environment (test containers)
+echo -e "${YELLOW}Removing test containers...${NC}"
+podman stop $(podman ps -aq --filter name=test 2>/dev/null) 2>/dev/null || true
+podman rm --force $(podman ps -aq --filter name=test 2>/dev/null) 2>/dev/null || true
+
 echo -e "${YELLOW}Setting up network...${NC}"
 podman network rm aztech-test-network 2>/dev/null || true
 podman network create aztech-test-network
