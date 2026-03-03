@@ -144,7 +144,7 @@ echo -e "${GREEN}Frontend container built${NC}"
 # Start database first
 cd /opt
 echo -e "${YELLOW}Starting database container...${NC}"
-podman-compose -f podman-compose.yml --project-name opt up -d opt_authserver-test-db
+podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-db
 
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database to be ready...${NC}"
