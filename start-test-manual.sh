@@ -125,7 +125,7 @@ cp authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
 # Build containers
 echo -e "${YELLOW}Building backend container...${NC}"
-cd backend
+cd authserver/backend
 go mod download
 CGO_ENABLED=0 GOOS=linux go build -o authserver .
 podman build -t localhost/opt_authserver-backend:latest .
@@ -133,15 +133,15 @@ cd ..
 echo -e "${GREEN}Backend container built${NC}"
 
 echo -e "${YELLOW}Building frontend container...${NC}"
-cd frontend
+cd authserver/frontend
 npm ci --silent
 npm run build
 podman build -t localhost/opt_authserver-frontend:latest .
 cd ..
 echo -e "${GREEN}Frontend container built${NC}"
 
-# Go back to apps-root directory
-cd ..
+# Go back to /opt directory
+cd /opt
 
 # Start database first
 echo -e "${YELLOW}Starting database container...${NC}"

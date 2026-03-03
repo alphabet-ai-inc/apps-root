@@ -16,7 +16,9 @@ services:
       - 5433:5432 # Different host port to avoid conflict with production (5432)
     networks:
       aztech-test-network:
-        driver: bridge
+        aliases:
+          - authserver-test-db
+          - postgres-test
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
