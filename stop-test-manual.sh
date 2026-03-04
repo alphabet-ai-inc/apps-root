@@ -29,10 +29,10 @@ fi
 echo -e "${YELLOW}Stopping services...${NC}"
 podman-compose -f podman-compose.yml --project-name opt down || true
 
-# Remove containers
+# Remove containers by name pattern (more reliable than labels)
 echo -e "${YELLOW}Removing containers...${NC}"
-podman stop $(podman ps -aq --filter "label=com.docker.compose.project=opt") 2>/dev/null || true
-podman rm $(podman ps -aq --filter "label=com.docker.compose.project=opt") 2>/dev/null || true
+podman stop $(podman ps -aq --filter name=opt_) 2>/dev/null || true
+podman rm $(podman ps -aq --filter name=opt_) 2>/dev/null || true
 
 # Remove volumes (optional - comment out if you want to keep data)
 echo -e "${YELLOW}Removing volumes...${NC}"

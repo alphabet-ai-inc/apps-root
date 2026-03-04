@@ -4,7 +4,7 @@ services:
   # ========== TEST DATABASE ==========
   authserver-test-db:
     image: postgres:18
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -37,7 +37,7 @@ services:
   # ========== TEST BACKEND ==========
   authserver-test-backend:
     image: opt_authserver-test-backend:latest
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -71,7 +71,7 @@ services:
   # ========== TEST FRONTEND ==========
   authserver-test-frontend:
     image: opt_authserver-test-frontend:latest
-    restart: unless-stopped
+    restart: always
     ports:
       - "4000:3000"
     networks:
