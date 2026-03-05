@@ -14,22 +14,60 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration (can be overridden by environment variables)
-export POSTGRES_USER="${POSTGRES_USER:-authuser}"
-export DB_PASSWORD="${DB_PASSWORD:-authpass123}"
-export POSTGRES_DB="${POSTGRES_DB:-authserver}"
-export JWT_SECRET="${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}"
-export JWT_ISSUER="${JWT_ISSUER:-authserver}"
-export JWT_AUDIENCE="${JWT_AUDIENCE:-authserver}"
-export SESSION_AUTH_KEY="${SESSION_AUTH_KEY:-your-session-auth-key-32-chars-minimum}"
-export SESSION_ENCRYPTION_KEY="${SESSION_ENCRYPTION_KEY:-your-session-encryption-key-32-chars}"
-export COOKIE_DOMAIN="${COOKIE_DOMAIN:-.test.auth.aztech-ai.com}"
-export DOMAIN="${DOMAIN:-test.auth.aztech-ai.com}"
+# Configuration (required - must be provided by Vault or environment)
+export POSTGRES_USER="$POSTGRES_USER"
+export DB_PASSWORD="$DB_PASSWORD"
+export POSTGRES_DB="$POSTGRES_DB"
+export JWT_SECRET="$JWT_SECRET"
+export JWT_ISSUER="$JWT_ISSUER"
+export JWT_AUDIENCE="$JWT_AUDIENCE"
+export SESSION_AUTH_KEY="$SESSION_AUTH_KEY"
+export SESSION_ENCRYPTION_KEY="$SESSION_ENCRYPTION_KEY"
+export COOKIE_DOMAIN="$COOKIE_DOMAIN"
+export DOMAIN="$DOMAIN"
 export API_DOMAIN="${API_DOMAIN:-api.$DOMAIN}"
-export ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-https://app.test.auth.aztech-ai.com,https://api.test.auth.aztech-ai.com}"
-export APP_PORT="${APP_PORT:-8081}"
-export VITE_BACKEND_URL="${VITE_BACKEND_URL:-http://localhost:8081}"
+export ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+export APP_PORT="$APP_PORT"
+export VITE_BACKEND_URL="$VITE_BACKEND_URL"
 export AUTH_REPO_URL="${AUTH_REPO_URL:-https://github.com/alphabet-ai-inc/authserver.git}"
+
+# Fetch secrets from Vault (required)
+if ! command_exists vault; then
+  echo -e "${RED}Vault client not installed. Please install Vault to fetch secrets.${NC}"
+  exit 1
+fi
+
+if [ -z "$VAULT_TOKEN" ] || [ -z "$VAULT_ADDR" ]; then
+  echo -e "${RED}VAULT_TOKEN and VAULT_ADDR must be set to fetch secrets.${NC}"
+  exit 1
+fi
+
+echo -e "${YELLOW}Fetching secrets from Vault...${NC}"
+export VAULT_ADDR="${VAULT_ADDR}"
+vault login "$VAULT_TOKEN" > /dev/null 2>&1
+
+# Fetch required secrets
+export POSTGRES_USER=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.user')
+export DB_PASSWORD=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.password')
+export POSTGRES_DB=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.database')
+export JWT_SECRET=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_secret')
+export JWT_ISSUER=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_issuer')
+export JWT_AUDIENCE=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_audience')
+export SESSION_AUTH_KEY=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.session_auth_key')
+export SESSION_ENCRYPTION_KEY=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.session_encryption_key')
+export DOMAIN=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.domain')
+export COOKIE_DOMAIN=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.cookie_domain')
+export ALLOWED_ORIGINS=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.allowed_origins')
+export APP_PORT=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.port')
+export VITE_BACKEND_URL=$(vault read -format=json secret/data/app-test/frontend | jq -r '.data.data.backend_url')
+
+# Validate that all secrets were fetched
+if [ -z "$POSTGRES_USER" ] || [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET" ] || [ -z "$DOMAIN" ]; then
+  echo -e "${RED}Failed to fetch required secrets from Vault. Deployment cancelled.${NC}"
+  exit 1
+fi
+
+echo -e "${GREEN}Secrets fetched from Vault${NC}"
 
 # For cloud deployment, use the actual API domain
 if [ "$DOMAIN" != "localhost" ]; then
