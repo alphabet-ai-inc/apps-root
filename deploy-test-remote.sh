@@ -80,7 +80,7 @@ go mod download
 CGO_ENABLED=0 GOOS=linux go build -o authserver .
 cd ../frontend
 npm ci --silent
-npm run build
+npm run buildgit
 cd /opt
 
 podman build -t localhost/authserver-test-backend -f authserver/backend/Dockerfile authserver/backend
