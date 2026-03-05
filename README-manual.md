@@ -1,6 +1,6 @@
 # Manual Authserver Container Setup
 
-This directory contains scripts to manually start and stop the authserver containers for local testing.
+This directory contains scripts to manually start the authserver containers for local testing.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ This directory contains scripts to manually start and stop the authserver contai
 
 1. **Start all services:**
    ```bash
-   ./start-manual.sh
+   ./start-remote.sh
    ```
 
 2. **Check status:**
@@ -26,11 +26,6 @@ This directory contains scripts to manually start and stop the authserver contai
    podman-compose -f podman-compose.yml --project-name srv logs -f
    ```
 
-4. **Stop all services:**
-   ```bash
-   ./stop-manual.sh
-   ```
-
 ## Services
 
 After starting, services will be available at:
@@ -41,9 +36,9 @@ After starting, services will be available at:
 
 ## Configuration
 
-The `start-manual.sh` script uses test/default values. To customize:
+The `start-remote.sh` script uses test/default values. To customize:
 
-1. Edit the environment variables at the top of `start-manual.sh`
+1. Edit the environment variables at the top of `start-remote.sh`
 2. Or modify the `.env` files after they are created
 
 ## Troubleshooting
@@ -55,6 +50,5 @@ The `start-manual.sh` script uses test/default values. To customize:
 
 ## What's Included
 
-- `start-manual.sh` - Complete setup and startup script
-- `stop-manual.sh` - Cleanup and shutdown script
+- `start-remote.sh` - Complete setup and startup script
 - `podman-compose.yml` - Container orchestration configuration

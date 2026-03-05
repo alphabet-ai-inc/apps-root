@@ -96,14 +96,13 @@ git clone "${AUTH_URL}/${AUTH_REPO}" /srv/authserver
 
 echo -e "${YELLOW}Preparing compose and backups...${NC}"
 cp -f /srv/apps-root/podman-compose.yml /srv/podman-compose.yml
-cp -f /srv/apps-root/start-manual.sh /srv/start-manual.sh
-cp -f /srv/apps-root/stop-manual.sh /srv/stop-manual.sh
+cp -f /srv/apps-root/start-remote.sh /srv/start-remote.sh
 cp -f /srv/apps-root/init-remote.sh /srv/init-remote.sh
-chmod +x /srv/start-manual.sh /srv/stop-manual.sh /srv/init-remote.sh
+chmod +x /srv/start-remote.sh /srv/init-remote.sh
 sed -i 's|image: postgres:18|image: localhost/srv_authserver-db:latest|' /srv/podman-compose.yml
 cp /srv/authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
-echo -e "${YELLOW}Running start-manual.sh with CI environment...${NC}"
+echo -e "${YELLOW}Running start-remote.sh with CI environment...${NC}"
 export DB_PASSWORD="$POSTGRES_PASSWORD"
 export AUTH_REPO_URL="${AUTH_URL}/${AUTH_REPO}"
 
@@ -121,7 +120,7 @@ echo "PATH=$PATH"
 echo "go:  $(command -v go || echo 'NOT FOUND')"
 echo "npm: $(command -v npm || echo 'NOT FOUND')"
 
-# Explicitly export all required variables for start-manual.sh
+# Explicitly export all required variables for start-remote.sh
 export GITHUB_TOKEN
 export GITHUB_ORG
 export AUTH_REPO
@@ -142,6 +141,6 @@ export VITE_BACKEND_URL
 export API_DOMAIN
 
 cd /srv
-bash /srv/start-manual.sh
+bash /srv/start-remote.sh
 
 echo -e "${GREEN}✅ Remote init completed${NC}"
