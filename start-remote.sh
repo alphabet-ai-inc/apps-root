@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Manual container startup script for authserver
-# This script sets up and starts all containers for local/cloud testing
+# Remote container startup script for authserver
+# This script sets up and starts all containers for remote deployment
 
 set -e  # Exit on any error
 
-echo "🚀 Starting manual authserver container setup..."
+echo "🚀 Starting remote authserver container setup..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -13,6 +13,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
 # Configuration (required - must be provided by Vault or environment)
 export POSTGRES_USER="$POSTGRES_USER"
@@ -79,11 +84,6 @@ echo "POSTGRES_USER: $POSTGRES_USER"
 echo "POSTGRES_DB: $POSTGRES_DB"
 echo "APP_PORT: $APP_PORT"
 echo ""
-
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
 
 # Check prerequisites
 echo -e "${YELLOW}Checking prerequisites...${NC}"
@@ -327,7 +327,7 @@ echo -e "${BLUE}Container status:${NC}"
 podman ps --filter "label=com.docker.compose.project=srv"
 
 echo ""
-echo -e "${GREEN}🎉 Setup complete!${NC}"
+echo -e "${GREEN}🎉 Remote setup complete!${NC}"
 echo ""
 echo -e "${BLUE}Services should be available at:${NC}"
 echo "Frontend: http://localhost:3000"
