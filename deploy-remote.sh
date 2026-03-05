@@ -36,6 +36,9 @@ if ! command -v podman-compose >/dev/null 2>&1; then
   sudo apt update && sudo apt install -y podman-compose
 fi
 
+# Disable systemd integration for podman-compose to prevent automatic stopping
+export PODMAN_COMPOSE_NO_SYSTEMD=1
+
 cd /srv
 
 AUTH_URL="https://x-access-token:${GITHUB_TOKEN}@github.com"
