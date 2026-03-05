@@ -92,6 +92,26 @@ export DB_PASSWORD="$POSTGRES_PASSWORD"
 podman-compose -f podman-compose.yml --project-name srv build authserver-backend authserver-frontend
 podman-compose -f podman-compose.yml --project-name srv up -d authserver-backend authserver-frontend
 
+# Wait for backend to be ready
+echo "Waiting for backend to be ready..."
+MAX_RETRIES=10
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if wget --quiet --tries=1 --spider http://127.0.0.1:8080/health; then
+        echo "Backend is ready!"
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "Waiting... ($RETRY_COUNT/$MAX_RETRIES)"
+    sleep 3
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo "Backend failed to start within timeout"
+    podman-compose -f podman-compose.yml --project-name srv logs authserver-backend
+    exit 1
+fi
+
 rm -f ~/.git-credentials
 git config --global --unset credential.helper || true
 
