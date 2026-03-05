@@ -32,9 +32,6 @@ for v in "${required_vars[@]}"; do
   fi
 done
 
-# Disable systemd integration for podman-compose to prevent automatic stopping
-export PODMAN_COMPOSE_NO_SYSTEMD=1
-
 cd /opt
 
 git config --global credential.helper store

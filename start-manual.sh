@@ -36,9 +36,6 @@ if [ "$DOMAIN" != "localhost" ]; then
     export VITE_BACKEND_URL="https://$API_DOMAIN"
 fi
 
-# Disable systemd integration for podman-compose to prevent automatic stopping
-export PODMAN_COMPOSE_NO_SYSTEMD=1
-
 echo -e "${BLUE}Using configuration:${NC}"
 echo "POSTGRES_USER: $POSTGRES_USER"
 echo "POSTGRES_DB: $POSTGRES_DB"
