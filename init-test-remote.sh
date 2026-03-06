@@ -157,8 +157,12 @@ echo -e "${GREEN}Backend container built${NC}"
 
 echo -e "${YELLOW}Building frontend container...${NC}"
 cd /opt/authserver/frontend
-npm ci --silent
-npm run build
+
+export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://api.auth-test.aztech-ai.com}"
+echo "Building with VITE_BACKEND_URL=${VITE_BACKEND_URL}"
+VITE_BACKEND_URL="${VITE_BACKEND_URL}" npm ci --silent
+VITE_BACKEND_URL="${VITE_BACKEND_URL}" npm run build
+
 podman build -t localhost/opt_authserver-test-frontend:latest .
 cd /opt
 echo -e "${GREEN}Frontend container built${NC}"
