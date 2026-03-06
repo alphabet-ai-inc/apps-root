@@ -1,0 +1,8 @@
+# Emergency manual scripts with hardcoded secrets
+# These scripts contain sensitive Vault tokens and should not be committed
+start-manual.sh
+start-test-manual.sh
+stop-manual.sh
+stop-test-manual.sh
+
+# These scripts are for emergency use only and may contain local modifications
