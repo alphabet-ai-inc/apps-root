@@ -98,7 +98,8 @@ echo -e "${YELLOW}Preparing compose and backups...${NC}"
 cp -f /opt/apps-root/podman-compose.test.yml /opt/podman-compose.yml
 cp -f /opt/apps-root/start-test-remote.sh /opt/start-test-remote.sh
 cp -f /opt/apps-root/init-test-remote.sh /opt/init-test-remote.sh
-chmod +x /opt/start-test-remote.sh /opt/init-test-remote.sh
+cp -f /opt/apps-root/check-test-backend-health.sh /opt/check-backend-health.sh
+chmod +x /opt/start-test-remote.sh /opt/init-test-remote.sh /opt/check-backend-health.sh
 cp /opt/authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
 echo -e "${YELLOW}Running start-test-remote.sh with CI environment...${NC}"
@@ -138,6 +139,29 @@ export ALLOWED_ORIGINS
 export APP_PORT
 export VITE_BACKEND_URL
 export API_DOMAIN
+
+# Build containers
+echo -e "${YELLOW}Building database container...${NC}"
+cd /opt/authserver/database
+podman build -t localhost/opt_authserver-test-db:latest .
+cd /opt
+echo -e "${GREEN}Database container built${NC}"
+
+echo -e "${YELLOW}Building backend container...${NC}"
+cd /opt/authserver/backend
+go mod download
+CGO_ENABLED=0 GOOS=linux go build -o authserver .
+podman build -t localhost/opt_authserver-test-backend:latest .
+cd /opt
+echo -e "${GREEN}Backend container built${NC}"
+
+echo -e "${YELLOW}Building frontend container...${NC}"
+cd /opt/authserver/frontend
+npm ci --silent
+npm run build
+podman build -t localhost/opt_authserver-test-frontend:latest .
+cd /opt
+echo -e "${GREEN}Frontend container built${NC}"
 
 cd /opt
 bash /opt/start-test-remote.sh

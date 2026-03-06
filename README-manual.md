@@ -1,52 +1,74 @@
-# Manual Authserver Container Setup
+# Emergency Manual Authserver Scripts
 
-This directory contains scripts to manually start the authserver containers for local testing.
+**EMERGENCY USE ONLY** - These scripts are for production/test recovery when CI/CD fails.
+
+## When to Use
+
+Use these scripts **only** when:
+- CI/CD deployment fails
+- Need immediate container restart
+- Cannot wait for automated deployment
+
+## Scripts
+
+### Production Environment
+- **`start-manual.sh`**: Reads secrets from Vault and starts production containers
+- **`stop-manual.sh`**: Stops production containers
+
+### Test Environment
+- **`start-test-manual.sh`**: Reads secrets from Vault and starts test containers
+- **`stop-test-manual.sh`**: Stops test containers
 
 ## Prerequisites
 
-- `podman` and `podman-compose` installed
-- `git` installed
-- `go` installed (for building backend)
-- `npm`/`node` installed (for building frontend)
+- Vault CLI installed
+- Scripts must be manually copied to `/srv` (production) or `/opt` (test) by administrator
+- **SECURITY WARNING**: Scripts contain hardcoded Vault tokens and self-delete after execution
 
-## Quick Start
+## How to Use
 
-1. **Start all services:**
+1. **Edit the script** with actual Vault tokens:
    ```bash
-   ./start-remote.sh
+   # In start-manual.sh, replace:
+   VAULT_TOKEN="YOUR_PRODUCTION_VAULT_TOKEN_HERE"
+
+   # In start-test-manual.sh, replace:
+   VAULT_TOKEN="YOUR_TEST_VAULT_TOKEN_HERE"
    ```
 
-2. **Check status:**
+2. **Copy to server:**
    ```bash
-   podman ps
+   scp start-manual.sh admin@production-server:/srv/
+   scp start-test-manual.sh admin@test-server:/opt/
    ```
 
-3. **View logs:**
+3. **Run on server:**
    ```bash
-   podman-compose -f podman-compose.yml --project-name srv logs -f
+   # Production
+   ./start-manual.sh
+
+   # Test
+   ./start-test-manual.sh
    ```
 
-## Services
+4. **Script automatically deletes itself** after successful execution for security
 
-After starting, services will be available at:
+## What They Do
 
-- **Frontend:** http://localhost:3000
-- **Backend:** http://localhost:8080
-- **Database:** localhost:5432
+- Authenticate with Vault
+- Read database, auth, and config secrets
+- Export secrets as environment variables
+- Start/stop containers with proper configuration
+- Display container status
 
-## Configuration
+## Important Notes
 
-The `start-remote.sh` script uses test/default values. To customize:
-
-1. Edit the environment variables at the top of `start-remote.sh`
-2. Or modify the `.env` files after they are created
-
-## Troubleshooting
-
-- **Permission issues:** Make sure you're not running as root
-- **Port conflicts:** Change ports in `podman-compose.yml` if needed
-- **Build failures:** Check that all dependencies are installed
-- **Database connection issues:** Verify the POSTGRES_USER and password match
+- **SECURITY**: Scripts contain hardcoded secrets and self-delete after successful execution
+- Scripts assume `/srv` and `/opt` directories exist with proper setup
+- Only handles container start/stop (no backups, restores, or config changes)
+- Requires proper Vault permissions for secret access
+- **EMERGENCY USE ONLY** - these bypass normal deployment processes
+- Scripts must be manually edited with actual tokens before deployment
 
 ## What's Included
 

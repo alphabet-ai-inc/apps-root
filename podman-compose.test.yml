@@ -36,14 +36,14 @@ services:
 
   # ========== TEST BACKEND ==========
   authserver-test-backend:
-    image: opt_authserver-test-backend:latest
+    image: localhost/opt_authserver-test-backend:latest
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_HOST: authserver-test-db
-      POSTGRES_EXTERNAL_PORT: 5432
+      POSTGRES_EXTERNAL_PORT: 5433
       DISABLE_TLS: "true"
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER}

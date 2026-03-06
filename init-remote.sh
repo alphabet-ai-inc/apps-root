@@ -99,7 +99,7 @@ cp -f /srv/apps-root/podman-compose.yml /srv/podman-compose.yml
 cp -f /srv/apps-root/start-remote.sh /srv/start-remote.sh
 cp -f /srv/apps-root/init-remote.sh /srv/init-remote.sh
 chmod +x /srv/start-remote.sh /srv/init-remote.sh
-sed -i 's|image: postgres:18|image: localhost/srv_authserver-db:latest|' /srv/podman-compose.yml
+# REMOVED: sed command that incorrectly changes postgres:18 to local image
 cp /srv/authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
 echo -e "${YELLOW}Running start-remote.sh with CI environment...${NC}"
@@ -139,6 +139,29 @@ export ALLOWED_ORIGINS
 export APP_PORT
 export VITE_BACKEND_URL
 export API_DOMAIN
+
+# Build containers
+echo -e "${YELLOW}Building database container...${NC}"
+cd /srv/authserver/database
+podman build -t localhost/srv_authserver-db:latest .
+cd /srv
+echo -e "${GREEN}Database container built${NC}"
+
+echo -e "${YELLOW}Building backend container...${NC}"
+cd /srv/authserver/backend
+go mod download
+CGO_ENABLED=0 GOOS=linux go build -o authserver .
+podman build -t localhost/srv_authserver-backend:latest .
+cd /srv
+echo -e "${GREEN}Backend container built${NC}"
+
+echo -e "${YELLOW}Building frontend container...${NC}"
+cd /srv/authserver/frontend
+npm ci --silent
+npm run build
+podman build -t localhost/srv_authserver-frontend:latest .
+cd /srv
+echo -e "${GREEN}Frontend container built${NC}"
 
 cd /srv
 bash /srv/start-remote.sh

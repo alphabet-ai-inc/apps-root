@@ -36,43 +36,48 @@ export APP_PORT="$APP_PORT"
 export VITE_BACKEND_URL="$VITE_BACKEND_URL"
 export AUTH_REPO_URL="${AUTH_REPO_URL:-https://github.com/alphabet-ai-inc/authserver.git}"
 
-# Fetch secrets from Vault (required)
-if ! command_exists vault; then
-  echo -e "${RED}Vault client not installed. Please install Vault to fetch secrets.${NC}"
-  exit 1
+# Check if all required environment variables are already set (skip Vault for test environments)
+if [ -n "$POSTGRES_USER" ] && [ -n "$DB_PASSWORD" ] && [ -n "$POSTGRES_DB" ] && [ -n "$JWT_SECRET" ] && [ -n "$DOMAIN" ]; then
+  echo -e "${GREEN}Environment variables already set, skipping Vault${NC}"
+else
+  # Fetch secrets from Vault (required)
+  if ! command_exists vault; then
+    echo -e "${RED}Vault client not installed. Please install Vault to fetch secrets.${NC}"
+    exit 1
+  fi
+
+  if [ -z "$VAULT_TOKEN" ] || [ -z "$VAULT_ADDR" ]; then
+    echo -e "${RED}VAULT_TOKEN and VAULT_ADDR must be set to fetch secrets.${NC}"
+    exit 1
+  fi
+
+  echo -e "${YELLOW}Fetching secrets from Vault...${NC}"
+  export VAULT_ADDR="${VAULT_ADDR}"
+  vault login "$VAULT_TOKEN" > /dev/null 2>&1
+
+  # Fetch required secrets
+  export POSTGRES_USER=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.user')
+  export DB_PASSWORD=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.password')
+  export POSTGRES_DB=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.database')
+  export JWT_SECRET=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_secret')
+  export JWT_ISSUER=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_issuer')
+  export JWT_AUDIENCE=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_audience')
+  export SESSION_AUTH_KEY=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.session_auth_key')
+  export SESSION_ENCRYPTION_KEY=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.session_encryption_key')
+  export DOMAIN=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.domain')
+  export COOKIE_DOMAIN=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.cookie_domain')
+  export ALLOWED_ORIGINS=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.allowed_origins')
+  export APP_PORT=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.port')
+  export VITE_BACKEND_URL=$(vault read -format=json secret/data/app-test/frontend | jq -r '.data.data.backend_url')
+
+  # Validate that all secrets were fetched
+  if [ -z "$POSTGRES_USER" ] || [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET" ] || [ -z "$DOMAIN" ]; then
+    echo -e "${RED}Failed to fetch required secrets from Vault. Deployment cancelled.${NC}"
+    exit 1
+  fi
+
+  echo -e "${GREEN}Secrets fetched from Vault${NC}"
 fi
-
-if [ -z "$VAULT_TOKEN" ] || [ -z "$VAULT_ADDR" ]; then
-  echo -e "${RED}VAULT_TOKEN and VAULT_ADDR must be set to fetch secrets.${NC}"
-  exit 1
-fi
-
-echo -e "${YELLOW}Fetching secrets from Vault...${NC}"
-export VAULT_ADDR="${VAULT_ADDR}"
-vault login "$VAULT_TOKEN" > /dev/null 2>&1
-
-# Fetch required secrets
-export POSTGRES_USER=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.user')
-export DB_PASSWORD=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.password')
-export POSTGRES_DB=$(vault read -format=json secret/data/app-test/database | jq -r '.data.data.database')
-export JWT_SECRET=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_secret')
-export JWT_ISSUER=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_issuer')
-export JWT_AUDIENCE=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.jwt_audience')
-export SESSION_AUTH_KEY=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.session_auth_key')
-export SESSION_ENCRYPTION_KEY=$(vault read -format=json secret/data/app-test/auth | jq -r '.data.data.session_encryption_key')
-export DOMAIN=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.domain')
-export COOKIE_DOMAIN=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.cookie_domain')
-export ALLOWED_ORIGINS=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.allowed_origins')
-export APP_PORT=$(vault read -format=json secret/data/app-test/config | jq -r '.data.data.port')
-export VITE_BACKEND_URL=$(vault read -format=json secret/data/app-test/frontend | jq -r '.data.data.backend_url')
-
-# Validate that all secrets were fetched
-if [ -z "$POSTGRES_USER" ] || [ -z "$DB_PASSWORD" ] || [ -z "$JWT_SECRET" ] || [ -z "$DOMAIN" ]; then
-  echo -e "${RED}Failed to fetch required secrets from Vault. Deployment cancelled.${NC}"
-  exit 1
-fi
-
-echo -e "${GREEN}Secrets fetched from Vault${NC}"
 
 # For cloud deployment, use the actual API domain
 if [ "$DOMAIN" != "localhost" ]; then
@@ -104,27 +109,34 @@ fi
 
 echo -e "${GREEN}Prerequisites OK${NC}"
 
-# Clone repositories if not already cloned
-if [ ! -d "authserver/.git" ]; then
-    echo -e "${YELLOW}Cloning authserver repository...${NC}"
-    git clone "$AUTH_REPO_URL" authserver
-    echo -e "${GREEN}Repository cloned${NC}"
+# Check if repositories are already cloned (CI/init environment) or need cloning (local development)
+if [ -d "/opt/authserver" ]; then
+    echo -e "${BLUE}Repositories already cloned in /opt/ (CI environment), skipping local setup${NC}"
+    # Copy database backup files to /tmp for restore step
+    cp /opt/authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 else
-    echo -e "${BLUE}Authserver repository already exists${NC}"
-fi
+    echo -e "${YELLOW}Setting up local repositories...${NC}"
+    # Clone repositories if not already cloned
+    if [ ! -d "authserver/.git" ]; then
+        echo -e "${YELLOW}Cloning authserver repository...${NC}"
+        git clone "$AUTH_REPO_URL" authserver
+        echo -e "${GREEN}Repository cloned${NC}"
+    else
+        echo -e "${BLUE}Authserver repository already exists${NC}"
+    fi
 
-# Create directories
-echo -e "${YELLOW}Creating directories...${NC}"
-mkdir -p authserver/database
-mkdir -p authserver/backend
-mkdir -p authserver/frontend
-echo -e "${GREEN}Directories created${NC}"
+    # Create directories
+    echo -e "${YELLOW}Creating directories...${NC}"
+    mkdir -p authserver/database
+    mkdir -p authserver/backend
+    mkdir -p authserver/frontend
+    echo -e "${GREEN}Directories created${NC}"
 
-# Create .env files
-echo -e "${YELLOW}Creating .env files...${NC}"
+    # Create .env files
+    echo -e "${YELLOW}Creating .env files...${NC}"
 
-# Database .env
-cat > authserver/database/.env << EOF
+    # Database .env
+    cat > authserver/database/.env << EOF
 POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$DB_PASSWORD
 POSTGRES_DB=$POSTGRES_DB
@@ -132,8 +144,8 @@ POSTGRES_EXTERNAL_PORT=5432
 POSTGRES_HOST=localhost
 EOF
 
-# Backend .env
-cat > authserver/backend/.env << EOF
+    # Backend .env
+    cat > authserver/backend/.env << EOF
 POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$DB_PASSWORD
 POSTGRES_DB=$POSTGRES_DB
@@ -150,16 +162,17 @@ ALLOWED_ORIGINS=$ALLOWED_ORIGINS
 PORT=$APP_PORT
 EOF
 
-# Frontend .env
-cat > authserver/frontend/.env << EOF
+    # Frontend .env
+    cat > authserver/frontend/.env << EOF
 VITE_BACKEND_URL=$VITE_BACKEND_URL
 EOF
 
-echo -e "${GREEN}.env files created${NC}"
+    echo -e "${GREEN}.env files created${NC}"
 
-# Copy database backup files to /tmp for restore step (same behavior as init.yml)
-echo -e "${YELLOW}Preparing database backup files...${NC}"
-cp authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
+    # Copy database backup files to /tmp for restore step
+    echo -e "${YELLOW}Preparing database backup files...${NC}"
+    cp authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
+fi
 
 # Create podman network (if it doesn't exist)
 echo -e "${YELLOW}Setting up podman network...${NC}"
@@ -169,30 +182,6 @@ else
     podman network create opt_aztech-network
     echo -e "${GREEN}Network created${NC}"
 fi
-
-# Build containers
-echo -e "${YELLOW}Building database container...${NC}"
-cd authserver/database
-podman build -t localhost/opt_authserver-test-db:latest .
-cd ..
-echo -e "${GREEN}Database container built${NC}"
-
-echo -e "${YELLOW}Building backend container...${NC}"
-cd authserver/backend
-go mod download
-CGO_ENABLED=0 GOOS=linux go build -o authserver .
-podman build -t localhost/opt_authserver-test-backend:latest .
-cd ..
-echo -e "${GREEN}Backend container built${NC}"
-
-echo -e "${YELLOW}Building frontend container...${NC}"
-cd authserver/frontend
-npm ci --silent
-npm run build
-podman build -t localhost/opt_authserver-test-frontend:latest .
-cd ..
-echo -e "${GREEN}Frontend container built${NC}"
-
 
 # Start database first
 echo -e "${YELLOW}Starting database container...${NC}"
