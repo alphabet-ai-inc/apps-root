@@ -60,12 +60,6 @@ services:
         condition: service_healthy
     networks:
       - aztech-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # ========== AUTH SERVER FRONTEND ==========
   authserver-frontend:
