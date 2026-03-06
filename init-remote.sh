@@ -157,6 +157,13 @@ echo -e "${GREEN}Backend container built${NC}"
 
 echo -e "${YELLOW}Building frontend container...${NC}"
 cd /srv/authserver/frontend
+
+# Create .env file for Vite (matching previous working versions)
+cat > .env << EOF
+VITE_BACKEND_URL=${VITE_BACKEND_URL}
+EOF
+
+echo "Building with VITE_BACKEND_URL=${VITE_BACKEND_URL}"
 npm ci --silent
 npm run build
 podman build -t localhost/srv_authserver-frontend:latest .
