@@ -162,11 +162,8 @@ echo -e "${GREEN}Backend container built${NC}"
 
 echo -e "${YELLOW}Building frontend container...${NC}"
 cd /opt/authserver/frontend
-# Ensure VITE_BACKEND_URL is set for the build
-export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://${API_DOMAIN}}"
-echo "Building with VITE_BACKEND_URL=${VITE_BACKEND_URL}"
-VITE_BACKEND_URL="${VITE_BACKEND_URL}" npm ci --silent
-VITE_BACKEND_URL="${VITE_BACKEND_URL}" npm run build
+npm ci --silent
+npm run build
 podman build -t localhost/opt_authserver-test-frontend:latest .
 cd /opt
 echo -e "${GREEN}Frontend container built${NC}"
