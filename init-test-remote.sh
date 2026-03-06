@@ -44,6 +44,11 @@ done
 export API_DOMAIN="${API_DOMAIN:-api.${DOMAIN}}"
 export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://${API_DOMAIN}}"
 
+# For test environment, ensure we have a reasonable default
+if [[ "$DOMAIN" == *"test"* ]] || [[ "$DOMAIN" == *"localhost"* ]]; then
+  export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://api.auth-test.aztech-ai.com}"
+fi
+
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
@@ -160,8 +165,8 @@ cd /opt/authserver/frontend
 # Ensure VITE_BACKEND_URL is set for the build
 export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://${API_DOMAIN}}"
 echo "Building with VITE_BACKEND_URL=${VITE_BACKEND_URL}"
-npm ci --silent
-npm run build
+VITE_BACKEND_URL="${VITE_BACKEND_URL}" npm ci --silent
+VITE_BACKEND_URL="${VITE_BACKEND_URL}" npm run build
 podman build -t localhost/opt_authserver-test-frontend:latest .
 cd /opt
 echo -e "${GREEN}Frontend container built${NC}"
