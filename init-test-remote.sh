@@ -158,6 +158,11 @@ echo -e "${GREEN}Backend container built${NC}"
 echo -e "${YELLOW}Building frontend container...${NC}"
 cd /opt/authserver/frontend
 
+# Create .env file for Vite (matching previous working versions)
+cat > .env << EOF
+VITE_BACKEND_URL=${VITE_BACKEND_URL:-https://api.auth-test.aztech-ai.com}
+EOF
+
 export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://api.auth-test.aztech-ai.com}"
 echo "Building with VITE_BACKEND_URL=${VITE_BACKEND_URL}"
 VITE_BACKEND_URL="${VITE_BACKEND_URL}" npm ci --silent
