@@ -44,11 +44,6 @@ done
 export API_DOMAIN="${API_DOMAIN:-api.${DOMAIN}}"
 export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://${API_DOMAIN}}"
 
-# For test environment, ensure we have a reasonable default
-if [[ "$DOMAIN" == *"test"* ]] || [[ "$DOMAIN" == *"localhost"* ]]; then
-  export VITE_BACKEND_URL="${VITE_BACKEND_URL:-https://api.auth-test.aztech-ai.com}"
-fi
-
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
