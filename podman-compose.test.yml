@@ -61,6 +61,12 @@ services:
         condition: service_healthy
     networks:
       - aztech-test-network
+    healthcheck:
+      test: ["CMD", "sh", "-c", "SILENT=1 /opt/check-backend-health.sh"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 40s
 
   # ========== TEST FRONTEND ==========
   authserver-test-frontend:

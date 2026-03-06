@@ -1,30 +1,33 @@
 #!/bin/bash
 
-# Test Backend Health Check Script
-# This script checks the health of the authserver test backend
+# Test Backend Health Check Script for Podman Health Checks
+# Silent version for container health monitoring
 
-set -e
+# Check if silent mode is requested
+if [ "${SILENT}" = "1" ]; then
+    # Silent mode for container health checks
+    BACKEND_URL="${BACKEND_URL:-http://localhost:8081}"
+    HEALTH_ENDPOINT="${HEALTH_ENDPOINT:-/health}"
+    TIMEOUT="${TIMEOUT:-10}"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+    if curl -s --max-time "${TIMEOUT}" "${BACKEND_URL}${HEALTH_ENDPOINT}" >/dev/null 2>&1; then
+        exit 0  # Healthy
+    else
+        exit 1  # Unhealthy
+    fi
+fi
 
-# Configuration for test environment
+# Verbose mode for manual checking
 BACKEND_URL="${BACKEND_URL:-http://localhost:8081}"
 HEALTH_ENDPOINT="${HEALTH_ENDPOINT:-/health}"
 TIMEOUT="${TIMEOUT:-10}"
 
-echo -e "${BLUE}🔍 Checking TEST backend health at ${BACKEND_URL}${HEALTH_ENDPOINT}${NC}"
-echo
+echo "🔍 Checking TEST backend health at ${BACKEND_URL}${HEALTH_ENDPOINT}"
 
-# Simple health check
 if curl -s --max-time "${TIMEOUT}" "${BACKEND_URL}${HEALTH_ENDPOINT}" >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ TEST backend is responding${NC}"
+    echo "✅ TEST backend is responding"
     exit 0
 else
-    echo -e "${RED}❌ TEST backend is not responding${NC}"
+    echo "❌ TEST backend is not responding"
     exit 1
 fi

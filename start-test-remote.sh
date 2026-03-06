@@ -161,26 +161,40 @@ echo -e "${GREEN}.env files created${NC}"
 echo -e "${YELLOW}Preparing database backup files...${NC}"
 cp authserver/database/*backup*.sql /tmp/ 2>/dev/null || true
 
+# Create podman network (if it doesn't exist)
+echo -e "${YELLOW}Setting up podman network...${NC}"
+if podman network ls --format "{{.Name}}" | grep -q "^opt_aztech-network$"; then
+    echo -e "${BLUE}Network opt_aztech-network already exists, reusing it${NC}"
+else
+    podman network create opt_aztech-network
+    echo -e "${GREEN}Network created${NC}"
+fi
+
 # Build containers
+echo -e "${YELLOW}Building database container...${NC}"
+cd authserver/database
+podman build -t localhost/opt_authserver-test-db:latest .
+cd ..
+echo -e "${GREEN}Database container built${NC}"
+
 echo -e "${YELLOW}Building backend container...${NC}"
 cd authserver/backend
 go mod download
 CGO_ENABLED=0 GOOS=linux go build -o authserver .
-podman build -t opt_authserver-test-backend:latest .
+podman build -t localhost/opt_authserver-test-backend:latest .
 cd ..
 echo -e "${GREEN}Backend container built${NC}"
 
 echo -e "${YELLOW}Building frontend container...${NC}"
-cd /opt/authserver/frontend
+cd authserver/frontend
 npm ci --silent
 npm run build
-podman build -t opt_authserver-test-frontend:latest .
+podman build -t localhost/opt_authserver-test-frontend:latest .
 cd ..
 echo -e "${GREEN}Frontend container built${NC}"
 
 
 # Start database first
-cd /opt
 echo -e "${YELLOW}Starting database container...${NC}"
 podman-compose -f podman-compose.yml --project-name opt up -d authserver-test-db
 

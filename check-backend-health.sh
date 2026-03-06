@@ -1,9 +1,24 @@
 #!/bin/bash
 
 # Backend Health Check Script
-# This script checks the health of the authserver backend without affecting container status
+# This script checks the health of the authserver backend
+# Use SILENT=1 for container health checks (no output, just exit codes)
 
 set -e
+
+# Check if silent mode is requested
+if [ "${SILENT}" = "1" ]; then
+    # Silent mode for container health checks
+    BACKEND_URL="${BACKEND_URL:-http://localhost:8080}"
+    HEALTH_ENDPOINT="${HEALTH_ENDPOINT:-/health}"
+    TIMEOUT="${TIMEOUT:-10}"
+
+    if curl -s --max-time "${TIMEOUT}" "${BACKEND_URL}${HEALTH_ENDPOINT}" >/dev/null 2>&1; then
+        exit 0  # Healthy
+    else
+        exit 1  # Unhealthy
+    fi
+fi
 
 # Colors for output
 RED='\033[0;31m'
